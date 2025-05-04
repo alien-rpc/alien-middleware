@@ -1,0 +1,121 @@
+import type { AdapterRequestContext, HattipHandler } from '@hattip/core'
+import type { MiddlewareChain } from './index.ts'
+
+export type RequestPlugin = {
+  /**
+   * Define properties on the request context.
+   */
+  define?: object
+  /**
+   * Add type-safe environment variables.
+   */
+  env?: object
+}
+
+type Inputs<T extends MiddlewareChain> = T['$']['input']
+type Platform<T extends MiddlewareChain> = T['$']['platform']
+
+type InputProperties<T extends MiddlewareChain> = Inputs<T>['properties']
+type InputEnv<T extends MiddlewareChain> = Inputs<T>['env']
+
+type Current<T extends MiddlewareChain> = T['$']['current']
+type Properties<T extends MiddlewareChain> = Current<T>['properties']
+type Env<T extends MiddlewareChain> = Current<T>['env']
+
+export type MiddlewareTypes<
+  TProperties extends object = any,
+  TEnv extends object = any,
+> = {
+  properties: TProperties
+  env: TEnv
+}
+
+// This interface exists to reduce visual noise when hovering on a
+// RequestContext variable in your IDE.
+interface HattipContext<TPlatform, TEnv extends object>
+  extends AdapterRequestContext<TPlatform> {
+  env<K extends keyof TEnv>(key: K): TEnv[K]
+  // Prevent unsafe access.
+  env(key: never): string | undefined
+}
+
+type CastNever<T, U> = [T] extends [never] ? U : T
+
+export type RequestContext<
+  TProperties extends object = {},
+  TEnv extends object = {},
+  TPlatform = unknown,
+> = HattipContext<TPlatform, TEnv> & CastNever<TProperties, {}>
+
+type Awaitable<T> = T | PromiseLike<T>
+
+export type RequestMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
+  context: RequestContext<InputProperties<T>, InputEnv<T>, Platform<T>>
+) => Awaitable<Response | RequestPlugin | void>
+
+export type ResponseMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
+  context: RequestContext<InputProperties<T>, InputEnv<T>, Platform<T>>,
+  response: Response
+) => Awaitable<Response | void>
+
+export type RequestHandler<
+  TInputs extends MiddlewareTypes,
+  TCurrent extends MiddlewareTypes,
+  TPlatform,
+> = HattipHandler<TPlatform> & MiddlewareChain<TInputs, TCurrent, TPlatform>
+
+/**
+ * Either a request middleware or a response middleware.
+ *
+ * If your middleware declares the `response` parameter, it's treated as a
+ * response middleware. This means it will run *after* a `Response` is generated
+ * by a request middleware.
+ */
+export type Middleware<
+  TProperties extends object = {},
+  TEnv extends object = {},
+  TPlatform = unknown,
+> = (
+  context: RequestContext<TProperties, TEnv, TPlatform>,
+  response: Response
+) => Awaitable<Response | RequestPlugin | void>
+
+type Merge<
+  TSource extends object,
+  TOverrides extends object | undefined,
+> = {} & (TOverrides extends object
+  ? {
+      [K in keyof TSource | keyof TOverrides]: K extends keyof TOverrides
+        ? TOverrides[K]
+        : K extends keyof TSource
+          ? TSource[K]
+          : never
+    }
+  : TSource)
+
+export type AnyMiddleware = Middleware<never, any, any>
+
+export type ApplyMiddleware<
+  TChain extends MiddlewareChain,
+  TMiddleware,
+> = TMiddleware extends MiddlewareChain
+  ? RequestHandler<Inputs<TChain>, Current<TChain>, Platform<TChain>>
+  : TMiddleware extends () => Awaitable<infer TPlugin extends RequestPlugin>
+    ? RequestHandler<
+        Inputs<TChain>,
+        {
+          properties: Merge<Properties<TChain>, TPlugin['define']>
+          env: Merge<Env<TChain>, TPlugin['env']>
+        },
+        Platform<TChain>
+      >
+    : RequestHandler<Inputs<TChain>, Current<TChain>, Platform<TChain>>
+
+export type ApplyFirstMiddleware<T extends Middleware> = ApplyMiddleware<
+  MiddlewareChain<
+    { properties: {}; env: {} },
+    { properties: {}; env: {} },
+    unknown
+  >,
+  T
+>

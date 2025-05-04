@@ -1,0 +1,42 @@
+{
+  "name": "alien-middleware",
+  "type": "module",
+  "version": "0.0.0",
+  "exports": {
+    "types": "./dist/index.d.ts",
+    "default": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "author": "Alec Larson",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alloc/alien-middleware.git"
+  },
+  "prettier": "@alloc/prettier-config",
+  "scripts": {
+    "dev": "rimraf dist && tsup --sourcemap --watch",
+    "build": "rimraf dist && tsup",
+    "format": "prettier --write .",
+    "lint": "tsc-lint",
+    "test": "vitest",
+    "prepublishOnly": "pnpm build"
+  },
+  "peerDependencies": {
+    "@hattip/core": "*"
+  },
+  "devDependencies": {
+    "@alloc/prettier-config": "^1.0.0",
+    "@hattip/core": "^0.0.49",
+    "@types/node": "^22.15.3",
+    "prettier": "^3.5.3",
+    "radashi": "12.5.0-beta.6d5c035",
+    "rimraf": "^6.0.1",
+    "tsc-lint": "^0.1.9",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.2"
+  }
+}
