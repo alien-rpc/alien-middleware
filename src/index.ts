@@ -155,3 +155,12 @@ export function chain<const T extends Middleware = Middleware>(middleware?: T) {
   const handler = new MiddlewareChain()
   return middleware ? handler.use(middleware) : handler
 }
+
+export type {
+  Middleware,
+  RequestContext,
+  RequestHandler,
+  RequestMiddleware,
+  RequestPlugin,
+  ResponseMiddleware,
+} from './types.ts'

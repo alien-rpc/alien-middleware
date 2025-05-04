@@ -93,8 +93,6 @@ type Merge<
     }
   : TSource)
 
-export type AnyMiddleware = Middleware<never, any, any>
-
 export type ApplyMiddleware<
   TChain extends MiddlewareChain,
   TMiddleware,
