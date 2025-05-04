@@ -73,9 +73,9 @@ export type ResponseMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
 ) => Awaitable<Response | void>
 
 export type RequestHandler<
-  TInputs extends MiddlewareTypes,
-  TCurrent extends MiddlewareTypes,
-  TPlatform,
+  TInputs extends MiddlewareTypes = any,
+  TCurrent extends MiddlewareTypes = any,
+  TPlatform = any,
 > = HattipHandler<TPlatform> & MiddlewareChain<TInputs, TCurrent, TPlatform>
 
 /**
