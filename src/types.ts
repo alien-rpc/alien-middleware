@@ -34,6 +34,12 @@ export type MiddlewareTypes<
 // RequestContext variable in your IDE.
 interface HattipContext<TPlatform, TEnv extends object>
   extends AdapterRequestContext<TPlatform> {
+  /**
+   * The `request.url` string parsed into a `URL` object. Parsing is performed
+   * on-demand and the result is cached.
+   */
+  url: URL
+
   env<K extends keyof TEnv>(key: K): TEnv[K]
   // Prevent unsafe access.
   env(key: never): string | undefined

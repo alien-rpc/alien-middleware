@@ -17,6 +17,16 @@ const kMiddlewareCache = Symbol('middlewareCache')
 type InternalContext = AdapterRequestContext<any> & {
   [kMiddlewareCache]?: Set<RequestMiddleware | ResponseMiddleware>
   [kIgnoreNotFound]?: boolean
+  url?: URL
+}
+
+const urlDescriptor: PropertyDescriptor = {
+  configurable: true,
+  get(this: InternalContext) {
+    const url = new URL(this.request.url)
+    Object.defineProperty(this, 'url', { value: url })
+    return url
+  },
 }
 
 export class MiddlewareChain<
@@ -66,6 +76,10 @@ export class MiddlewareChain<
     async function handler(parentContext: InternalContext) {
       const context = Object.create(parentContext)
       context[kIgnoreNotFound] = true
+
+      if (!('url' in context)) {
+        Object.defineProperty(context, 'url', urlDescriptor)
+      }
 
       // Avoid calling the same middleware twice.
       const cache = (context[kMiddlewareCache] ||= new Set())
