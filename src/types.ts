@@ -61,6 +61,15 @@ export type RequestContext<
   TPlatform = any,
 > = HattipContext<TPlatform, TEnv> & Intersectable<TProperties>
 
+/**
+ * Extract a `RequestContext` type from a `MiddlewareChain` type.
+ *
+ * When type `T` is `never`, a default context is returned.
+ */
+export type MiddlewareContext<T extends MiddlewareChain> = [T] extends [never]
+  ? RequestContext<{}, {}, unknown>
+  : RequestContext<Properties<T>, Env<T>, Platform<T>>
+
 type Awaitable<T> = T | PromiseLike<T>
 
 export type RequestMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
