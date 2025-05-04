@@ -88,7 +88,7 @@ export type RequestHandler<
 export type Middleware<
   TProperties extends object = any,
   TEnv extends object = any,
-  TPlatform = unknown,
+  TPlatform = any,
 > = (
   context: RequestContext<TProperties, TEnv, TPlatform>,
   response: Response
