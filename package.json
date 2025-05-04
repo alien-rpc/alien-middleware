@@ -1,7 +1,7 @@
 {
   "name": "alien-middleware",
   "type": "module",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "exports": {
     "types": "./dist/index.d.ts",
     "default": "./dist/index.js"
