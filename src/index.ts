@@ -3,6 +3,7 @@ import { isPromise } from 'radashi'
 import {
   ApplyFirstMiddleware,
   ApplyMiddleware,
+  ExtractMiddleware,
   MergeMiddleware,
   Middleware,
   MiddlewareTypes,
@@ -58,13 +59,9 @@ export class MiddlewareChain<
    *
    * @returns a new `MiddlewareChain` instance
    */
-  use<
-    const TMiddleware extends Middleware<
-      TCurrent['properties'],
-      TCurrent['env'],
-      TPlatform
-    >,
-  >(middleware: TMiddleware): ApplyMiddleware<this, TMiddleware> {
+  use<const TMiddleware extends ExtractMiddleware<this>>(
+    middleware: TMiddleware
+  ): ApplyMiddleware<this, TMiddleware> {
     let requestChain = this[kRequestChain]
     let responseChain = this[kResponseChain]
 
@@ -85,13 +82,9 @@ export class MiddlewareChain<
    * short-circuits to the `use` method. You should prefer using the `use`
    * method directly, if possible.
    */
-  merge<
-    TMiddleware extends Middleware<
-      TCurrent['properties'],
-      TCurrent['env'],
-      TPlatform
-    >,
-  >(chain: TMiddleware): MergeMiddleware<this, TMiddleware> {
+  merge<TMiddleware extends ExtractMiddleware<this>>(
+    chain: TMiddleware
+  ): MergeMiddleware<this, TMiddleware> {
     if (chain instanceof MiddlewareChain) {
       return createHandler(
         [...this[kRequestChain], ...chain[kRequestChain]],
@@ -105,7 +98,7 @@ export class MiddlewareChain<
 function createHandler(
   requestChain: RequestMiddleware[],
   responseChain: ResponseMiddleware[]
-) {
+): any {
   async function handler(parentContext: InternalContext) {
     const context = Object.create(parentContext)
     context[kIgnoreNotFound] = true
@@ -212,6 +205,7 @@ export function chain<const T extends Middleware = Middleware>(middleware?: T) {
 }
 
 export type {
+  ExtractMiddleware,
   Middleware,
   RequestContext,
   RequestHandler,

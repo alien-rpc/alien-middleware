@@ -94,6 +94,15 @@ export type Middleware<
   response: Response
 ) => Awaitable<Response | RequestPlugin | void>
 
+/**
+ * Extract a `Middleware` type from a `MiddlewareChain` type.
+ */
+export type ExtractMiddleware<T extends MiddlewareChain> = Middleware<
+  Properties<T>,
+  Env<T>,
+  Platform<T>
+>
+
 type Merge<
   TSource extends object,
   TOverrides extends object | undefined,
