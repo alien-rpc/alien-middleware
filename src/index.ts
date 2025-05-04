@@ -53,7 +53,7 @@ export class MiddlewareChain<
   protected [kResponseChain]: ResponseMiddleware[] = []
 
   /**
-   * Attach a middleware. If the `response` paramter is declared, it will be
+   * Attach a middleware. If the `response` parameter is declared, it will be
    * treated as a response middleware. Otherwise, it will be treated as a
    * request middleware.
    *
