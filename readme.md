@@ -117,14 +117,14 @@ Request middleware runs sequentially before a `Response` is generated.
   const app = chain().use(addUser).use(greetUser)
   ```
 
-  > [!NOTE]
-  > If you're wondering why you need to return a `{ define: { … } }` object
-  > (rather than using simple assignment), it's because TypeScript is unable to
-  > infer the type of the context object downstream if you don't do this.
-  >
-  > Another thing to note is you don't typically define middlewares outside the
-  > `.use(…)` call expression, since that requires you to unnecessarily declare
-  > the type of the context object. It's better to define them inline.
+> [!NOTE]
+> If you're wondering why you need to return a `{ define: { … } }` object
+> (rather than using simple assignment), it's because TypeScript is unable to
+> infer the type of the context object downstream if you don't do this.
+>
+> Another thing to note is you don't typically define middlewares outside the
+> `.use(…)` call expression, since that requires you to unnecessarily declare
+> the type of the context object. It's better to define them inline.
 
 - **Extending Environment:** Return an object with an `env` property to add environment variables accessible via `ctx.env()`.
 
