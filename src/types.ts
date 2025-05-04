@@ -131,3 +131,15 @@ export type ApplyFirstMiddleware<T extends Middleware> = ApplyMiddleware<
   >,
   T
 >
+
+export type MergeMiddlewareChains<
+  TFirst extends MiddlewareChain,
+  TSecond extends MiddlewareChain<Current<TFirst>, any, Platform<TFirst>>,
+> = RequestHandler<
+  Inputs<TFirst>,
+  {
+    properties: Merge<Properties<TFirst>, Properties<TSecond>>
+    env: Merge<Env<TFirst>, Env<TSecond>>
+  },
+  Platform<TFirst>
+>

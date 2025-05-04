@@ -102,3 +102,55 @@ describe('nested middleware chains', () => {
     expect(ware).toHaveBeenCalled()
   })
 })
+
+describe('merging middleware chains', () => {
+  test('request middlewares are merged', async () => {
+    const nestedApp = chain(() => ({
+      define: { foo: true },
+    }))
+
+    const first = vi.fn((ctx: RequestContext) => {
+      expect(ctx.foo).toBe(undefined)
+    })
+
+    const last = vi.fn((ctx: RequestContext<{ foo: boolean }>) => {
+      expect(ctx.foo).toBe(true)
+    })
+
+    const app = chain().use(first).merge(nestedApp).use(last)
+
+    const response = await app.use(first)(context)
+    expect(response.status).toBe(404)
+    expect(first).toHaveBeenCalled()
+    expect(last).toHaveBeenCalled()
+  })
+
+  test('response middlewares are merged', async () => {
+    let calls = 0
+
+    const nestedWare = vi.fn((ctx: RequestContext, response: Response) => {
+      expect(calls++).toBe(1)
+      expect(response.status).toBe(418)
+    })
+
+    const nestedApp = chain(() => new Response(null, { status: 418 })).use(
+      nestedWare
+    )
+
+    const first = vi.fn((ctx: RequestContext, response: Response) => {
+      expect(calls++).toBe(0)
+      expect(response.status).toBe(418)
+    })
+
+    const last = vi.fn((ctx: RequestContext, response: Response) => {
+      expect(calls++).toBe(2)
+      expect(response.status).toBe(418)
+    })
+
+    const app = chain().use(first).merge(nestedApp).use(last)
+
+    const response = await app.use(first)(context)
+    expect(response.status).toBe(418)
+    expect(calls).toBe(3)
+  })
+})

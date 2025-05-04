@@ -3,6 +3,7 @@ import { isPromise } from 'radashi'
 import {
   ApplyFirstMiddleware,
   ApplyMiddleware,
+  MergeMiddlewareChains,
   Middleware,
   MiddlewareTypes,
   RequestMiddleware,
@@ -73,75 +74,101 @@ export class MiddlewareChain<
       responseChain = [...responseChain, middleware as any]
     }
 
-    async function handler(parentContext: InternalContext) {
-      const context = Object.create(parentContext)
-      context[kIgnoreNotFound] = true
+    return createHandler(requestChain, responseChain)
+  }
 
-      if (!('url' in context)) {
-        Object.defineProperty(context, 'url', urlDescriptor)
-      }
+  /**
+   * Merge two middleware chains.
+   *
+   * NOTE: This method is **unsafe**, as the merged middleware chain is capable
+   * of overriding context properties, which could morph the context into a
+   * shape that's incompatible with request middlewares from the original chain.
+   * For this reason, it's best to only use this method if only the merged
+   * middleware chain (or neither) has a request middleware that relies on
+   * custom context properties.
+   */
+  merge<TChain extends MiddlewareChain<TCurrent, any, TPlatform>>(
+    chain: TChain
+  ): MergeMiddlewareChains<this, TChain> {
+    return createHandler(
+      [...this[kRequestChain], ...chain[kRequestChain]],
+      [...this[kResponseChain], ...chain[kResponseChain]]
+    )
+  }
+}
 
-      // Avoid calling the same middleware twice.
-      const cache = (context[kMiddlewareCache] ||= new Set())
+function createHandler(
+  requestChain: RequestMiddleware[],
+  responseChain: ResponseMiddleware[]
+) {
+  async function handler(parentContext: InternalContext) {
+    const context = Object.create(parentContext)
+    context[kIgnoreNotFound] = true
 
-      let response: Response | undefined
-      let env: Record<string, string> | undefined
-
-      for (const middleware of requestChain) {
-        if (cache.has(middleware)) {
-          continue
-        }
-        cache.add(middleware)
-        let result = middleware(context)
-        if (isPromise(result)) {
-          result = await result
-        }
-        // If defined, it's a response or a plugin.
-        if (result) {
-          if (result instanceof Response) {
-            response = result
-            break
-          }
-          if (result.define) {
-            Object.assign(context, result.define)
-          }
-          if (result.env) {
-            env ||= createExtendedEnv(context)
-            Object.assign(env, result.env)
-          }
-        }
-      }
-
-      if (!response) {
-        if (parentContext[kIgnoreNotFound]) {
-          return // …instead of issuing a 404 Response.
-        }
-        response = new Response('Not Found', { status: 404 })
-      }
-
-      for (const middleware of responseChain) {
-        if (cache.has(middleware)) {
-          continue
-        }
-        cache.add(middleware)
-        let result = middleware(context, response)
-        if (isPromise(result)) {
-          result = await result
-        }
-        if (result && result instanceof Response) {
-          response = result
-          continue // …instead of break.
-        }
-      }
-
-      return response
+    if (!('url' in context)) {
+      Object.defineProperty(context, 'url', urlDescriptor)
     }
 
-    Object.setPrototypeOf(handler, MiddlewareChain.prototype)
-    handler[kRequestChain] = requestChain
-    handler[kResponseChain] = responseChain
-    return handler as any
+    // Avoid calling the same middleware twice.
+    const cache = (context[kMiddlewareCache] ||= new Set())
+
+    let response: Response | undefined
+    let env: Record<string, string> | undefined
+
+    for (const middleware of requestChain) {
+      if (cache.has(middleware)) {
+        continue
+      }
+      cache.add(middleware)
+      let result = middleware(context)
+      if (isPromise(result)) {
+        result = await result
+      }
+      // If defined, it's a response or a plugin.
+      if (result) {
+        if (result instanceof Response) {
+          response = result
+          break
+        }
+        if (result.define) {
+          Object.assign(context, result.define)
+        }
+        if (result.env) {
+          env ||= createExtendedEnv(context)
+          Object.assign(env, result.env)
+        }
+      }
+    }
+
+    if (!response) {
+      if (parentContext[kIgnoreNotFound]) {
+        return // …instead of issuing a 404 Response.
+      }
+      response = new Response('Not Found', { status: 404 })
+    }
+
+    for (const middleware of responseChain) {
+      if (cache.has(middleware)) {
+        continue
+      }
+      cache.add(middleware)
+      let result = middleware(context, response)
+      if (isPromise(result)) {
+        result = await result
+      }
+      if (result && result instanceof Response) {
+        response = result
+        continue // …instead of break.
+      }
+    }
+
+    return response
   }
+
+  Object.setPrototypeOf(handler, MiddlewareChain.prototype)
+  handler[kRequestChain] = requestChain
+  handler[kResponseChain] = responseChain
+  return handler as any
 }
 
 function createExtendedEnv(context: InternalContext) {
