@@ -193,6 +193,9 @@ export function chain<const T extends Middleware = Middleware>(
 ): ApplyFirstMiddleware<T>
 
 export function chain<const T extends Middleware = Middleware>(middleware?: T) {
+  if (middleware instanceof MiddlewareChain) {
+    return middleware
+  }
   const handler = new MiddlewareChain()
   return middleware ? handler.use(middleware) : handler
 }

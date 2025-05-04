@@ -123,14 +123,17 @@ export type ApplyMiddleware<
       >
     : RequestHandler<Inputs<TChain>, Current<TChain>, Platform<TChain>>
 
-export type ApplyFirstMiddleware<T extends Middleware> = ApplyMiddleware<
-  MiddlewareChain<
-    { properties: {}; env: {} },
-    { properties: {}; env: {} },
-    unknown
-  >,
-  T
->
+export type ApplyFirstMiddleware<T extends Middleware> =
+  T extends MiddlewareChain
+    ? T
+    : ApplyMiddleware<
+        MiddlewareChain<
+          { properties: {}; env: {} },
+          { properties: {}; env: {} },
+          unknown
+        >,
+        T
+      >
 
 export type MergeMiddlewareChains<
   TFirst extends MiddlewareChain,
