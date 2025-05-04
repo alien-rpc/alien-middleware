@@ -3,7 +3,7 @@ import { isPromise } from 'radashi'
 import {
   ApplyFirstMiddleware,
   ApplyMiddleware,
-  MergeMiddlewareChains,
+  MergeMiddleware,
   Middleware,
   MiddlewareTypes,
   RequestMiddleware,
@@ -80,14 +80,25 @@ export class MiddlewareChain<
   /**
    * Merge two middleware chains. The middlewares from the second chain will be
    * executed after the middlewares from the first chain.
+   *
+   * For ease of use, this method may be given a middleware function, which
+   * short-circuits to the `use` method. You should prefer using the `use`
+   * method directly, if possible.
    */
-  merge<TChain extends MiddlewareChain<TCurrent, any, TPlatform>>(
-    chain: TChain
-  ): MergeMiddlewareChains<this, TChain> {
-    return createHandler(
-      [...this[kRequestChain], ...chain[kRequestChain]],
-      [...this[kResponseChain], ...chain[kResponseChain]]
-    )
+  merge<
+    TMiddleware extends Middleware<
+      TCurrent['properties'],
+      TCurrent['env'],
+      TPlatform
+    >,
+  >(chain: TMiddleware): MergeMiddleware<this, TMiddleware> {
+    if (chain instanceof MiddlewareChain) {
+      return createHandler(
+        [...this[kRequestChain], ...chain[kRequestChain]],
+        [...this[kResponseChain], ...chain[kResponseChain]]
+      )
+    }
+    return this.use(chain) as any
   }
 }
 

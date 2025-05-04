@@ -107,21 +107,31 @@ type Merge<
     }
   : TSource)
 
+type ApplyRequestPlugin<
+  TParent extends MiddlewareChain,
+  TPlugin extends RequestPlugin,
+> = {
+  properties: Merge<Properties<TParent>, TPlugin['define']>
+  env: Merge<Env<TParent>, TPlugin['env']>
+}
+
+/**
+ * This applies a middleware to a chain. If the type `TMiddleware` is itself a
+ * chain, it's treated as a nested chain, which won't leak its plugins into the
+ * parent chain.
+ */
 export type ApplyMiddleware<
-  TChain extends MiddlewareChain,
+  TParent extends MiddlewareChain,
   TMiddleware,
 > = TMiddleware extends MiddlewareChain
-  ? RequestHandler<Inputs<TChain>, Current<TChain>, Platform<TChain>>
+  ? RequestHandler<Inputs<TParent>, Current<TParent>, Platform<TParent>>
   : TMiddleware extends () => Awaitable<infer TPlugin extends RequestPlugin>
     ? RequestHandler<
-        Inputs<TChain>,
-        {
-          properties: Merge<Properties<TChain>, TPlugin['define']>
-          env: Merge<Env<TChain>, TPlugin['env']>
-        },
-        Platform<TChain>
+        Inputs<TParent>,
+        ApplyRequestPlugin<TParent, TPlugin>,
+        Platform<TParent>
       >
-    : RequestHandler<Inputs<TChain>, Current<TChain>, Platform<TChain>>
+    : RequestHandler<Inputs<TParent>, Current<TParent>, Platform<TParent>>
 
 export type ApplyFirstMiddleware<T extends Middleware> =
   T extends MiddlewareChain
@@ -135,14 +145,18 @@ export type ApplyFirstMiddleware<T extends Middleware> =
         T
       >
 
-export type MergeMiddlewareChains<
+export type MergeMiddleware<
   TFirst extends MiddlewareChain,
-  TSecond extends MiddlewareChain<Current<TFirst>, any, Platform<TFirst>>,
+  TSecond extends Middleware<Properties<TFirst>, Env<TFirst>, Platform<TFirst>>,
 > = RequestHandler<
   Inputs<TFirst>,
-  {
-    properties: Merge<Properties<TFirst>, Properties<TSecond>>
-    env: Merge<Env<TFirst>, Env<TSecond>>
-  },
+  TSecond extends MiddlewareChain
+    ? {
+        properties: Merge<Properties<TFirst>, Properties<TSecond>>
+        env: Merge<Env<TFirst>, Env<TSecond>>
+      }
+    : TSecond extends () => Awaitable<infer TPlugin extends RequestPlugin>
+      ? ApplyRequestPlugin<TFirst, TPlugin>
+      : Current<TFirst>,
   Platform<TFirst>
 >
