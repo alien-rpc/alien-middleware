@@ -82,6 +82,14 @@ server.listen(3000, () => {
 > If no middleware in the chain returns a `Response`, a `404 Not Found` response
 > is automatically returned.
 
+#### Middlewares are deduplicated.
+
+If you add the same middleware multiple times, it will only run once. This is a safety measure that allows you to use the same middleware in different places without worrying about it running multiple times.
+
+```typescript
+const app = chain().use(myMiddleware).use(myMiddleware)
+```
+
 ### Request Middleware
 
 Request middleware runs sequentially before a `Response` is generated.
