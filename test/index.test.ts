@@ -29,6 +29,7 @@ describe('request middleware', () => {
     const ware = vi.fn((ctx: RequestContext<{ foo: boolean }>) => {
       expect(ctx.foo).toBe(true)
     })
+    expect(ware.length).toBe(1)
     await app.use(() => ({ define: { foo: true } })).use(ware)(context)
     expect(ware).toHaveBeenCalled()
   })
@@ -55,6 +56,8 @@ describe('response middleware', () => {
     const ware = vi.fn((ctx: RequestContext, response: Response) => {
       expect(response.status).toBe(418)
     })
+
+    expect(ware.length).toBe(2)
 
     const response = await app
       .use(() => new Response(null, { status: 418 }))
