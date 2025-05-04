@@ -102,7 +102,7 @@ export class MiddlewareChain<
         if (parentContext[kIgnoreNotFound]) {
           return // …instead of issuing a 404 Response.
         }
-        return new Response('Not Found', { status: 404 })
+        response = new Response('Not Found', { status: 404 })
       }
 
       for (const middleware of responseChain) {

@@ -76,6 +76,16 @@ describe('response middleware', () => {
     expect(response.status).toBe(404)
     expect(ware).toHaveBeenCalled()
   })
+
+  test('called even if no response is generated', async () => {
+    const ware = vi.fn((ctx: RequestContext, response: Response) => {
+      expect(response.status).toBe(404)
+    })
+
+    const response = await app.use(ware)(context)
+    expect(response.status).toBe(404)
+    expect(ware).toHaveBeenCalled()
+  })
 })
 
 describe('nested middleware chains', () => {
