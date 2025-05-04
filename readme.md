@@ -202,3 +202,36 @@ const finalApp = chain().use(innerChain).use(outerMiddleware)
 ```
 
 If a nested chain does not return a `Response`, execution continues with the next middleware in the outer chain.
+
+### Safe Environment Variables
+
+When writing a Hattip handler without this package, the `context.env()` method is inherently unsafe. Its return type is always `string | undefined`, which means you either need to write defensive checks or use type assertions. Neither is ideal.
+
+With alien-middleware, you **must** declare an environment variable's type in order to use it.
+
+```typescript
+import { chain } from 'alien-middleware'
+
+// A common pattern is to declare a dedicated type for the environment variables.
+type Env = {
+  API_KEY: string
+}
+
+const app = chain<any, Env>().use(context => {
+  const key = context.env('API_KEY')
+  //    ^? string
+})
+```
+
+When defining a middleware, you can declare env types that the middleware expects to use.
+
+```typescript
+import type { RequestContext } from 'alien-middleware'
+
+// Assuming `Env` is defined like in the previous example.
+const myMiddleware = (context: RequestContext<any, Env>) => {
+  const key = context.env('API_KEY')
+}
+```
+
+In both examples, we skip declaring any additional context properties (the first type parameter) because we're not using any. The second type parameter is for environment variables. The third is for the special `context.platform` property, whose value is provided by the host platform (e.g. Node.js, Deno, Bun, etc). On principle, a middleware should avoid using the `context.platform` property, since that could make it non-portable unless you write extra fallback logic for other hosts.
