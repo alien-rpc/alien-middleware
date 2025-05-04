@@ -59,29 +59,28 @@ const finalApp = app.use(firstMiddleware).use(secondMiddleware)
 
 ### Executing the Chain
 
-To run the middleware chain, call the chain instance itself with a context object. This object typically comes from an adapter like Hattip's [Node adapter](https://www.npmjs.com/package/@hattip/adapter-node).
+To run the middleware chain, pass it to a Hattip adapter like the [Node adapter](https://www.npmjs.com/package/@hattip/adapter-node). The middleware chain is a valid Hattip handler.
 
 ```typescript
-// Simplified context for demonstration (requires necessary imports like 'noop' if run directly)
-const context: AdapterRequestContext = {
-  request: new Request('http://localhost/test'),
-  ip: '127.0.0.1',
-  platform: {},
-  waitUntil: (promise: Promise<any>) => {},
-  passThrough: () => {},
-  env: (key: string) => undefined, // Basic env function
-}
+import { createServer } from '@hattip/adapter-node'
 
-// Execute the chain
-const response = await finalApp(context) // Assuming finalApp from previous example
+const app = chain()
+  .use(mySessionMiddleware)
+  .use(myAuthMiddleware)
+  .use(myLoggerMiddleware)
 
-console.log(await response.text()) // Output: Hello from middleware!
-console.log(response.status) // Output: 200
+// Create a server
+const server = createServer(app)
+
+// Start the server
+server.listen(3000, () => {
+  console.log('Server is running on port 3000')
+})
 ```
 
 > [!NOTE]
 > If no middleware in the chain returns a `Response`, a `404 Not Found` response
-> is automatically returned, except for nested chains.
+> is automatically returned.
 
 ### Request Middleware
 
