@@ -1,4 +1,5 @@
 import type { AdapterRequestContext, HattipHandler } from '@hattip/core'
+import { Any } from 'radashi'
 import type { MiddlewareChain } from './index.ts'
 
 export type RequestPlugin = {
@@ -40,18 +41,25 @@ interface HattipContext<TPlatform, TEnv extends object>
    */
   url: URL
 
-  env<K extends keyof TEnv>(key: K): TEnv[K]
+  env<K extends keyof TEnv>(key: Extract<K, string>): TEnv[K]
   // Prevent unsafe access.
   env(key: never): string | undefined
 }
 
-type CastNever<T, U> = [T] extends [never] ? U : T
+/**
+ * Converts a type `T` to something that can be intersected with an object.
+ */
+type Intersectable<T extends object> = [T] extends [never]
+  ? {}
+  : [T] extends [Any]
+    ? Record<PropertyKey, any>
+    : T
 
 export type RequestContext<
-  TProperties extends object = {},
-  TEnv extends object = {},
-  TPlatform = unknown,
-> = HattipContext<TPlatform, TEnv> & CastNever<TProperties, {}>
+  TProperties extends object = any,
+  TEnv extends object = any,
+  TPlatform = any,
+> = HattipContext<TPlatform, TEnv> & Intersectable<TProperties>
 
 type Awaitable<T> = T | PromiseLike<T>
 
@@ -78,8 +86,8 @@ export type RequestHandler<
  * by a request middleware.
  */
 export type Middleware<
-  TProperties extends object = {},
-  TEnv extends object = {},
+  TProperties extends object = any,
+  TEnv extends object = any,
   TPlatform = unknown,
 > = (
   context: RequestContext<TProperties, TEnv, TPlatform>,
