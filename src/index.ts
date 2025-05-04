@@ -205,7 +205,9 @@ export function chain<const T extends Middleware = Middleware>(middleware?: T) {
 }
 
 export type {
+  ApplyMiddleware,
   ExtractMiddleware,
+  MergeMiddleware,
   Middleware,
   MiddlewareContext,
   RequestContext,
