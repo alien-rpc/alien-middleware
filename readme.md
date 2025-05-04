@@ -221,14 +221,6 @@ const mergedApp = chain().use(middleware1).merge(chain().use(middleware2))
 const mergedApp = chain().use(middleware1).use(middleware2)
 ```
 
-> [!DANGER]
-> Merging chains is **unsafe**, as the merged middleware chain is capable
-> of overriding context properties, which could morph the context into a
-> shape that's incompatible with request middlewares from the original chain.
-> For this reason, it's best to only use this method if only the merged
-> middleware chain (or neither) has a request middleware that relies on
-> custom context properties.
-
 ### Safe Environment Variables
 
 When writing a Hattip handler without this package, the `context.env()` method is inherently unsafe. Its return type is always `string | undefined`, which means you either need to write defensive checks or use type assertions. Neither is ideal.

@@ -78,14 +78,8 @@ export class MiddlewareChain<
   }
 
   /**
-   * Merge two middleware chains.
-   *
-   * NOTE: This method is **unsafe**, as the merged middleware chain is capable
-   * of overriding context properties, which could morph the context into a
-   * shape that's incompatible with request middlewares from the original chain.
-   * For this reason, it's best to only use this method if only the merged
-   * middleware chain (or neither) has a request middleware that relies on
-   * custom context properties.
+   * Merge two middleware chains. The middlewares from the second chain will be
+   * executed after the middlewares from the first chain.
    */
   merge<TChain extends MiddlewareChain<TCurrent, any, TPlatform>>(
     chain: TChain
@@ -131,7 +125,13 @@ function createHandler(
           break
         }
         if (result.define) {
-          Object.assign(context, result.define)
+          for (const key in result.define) {
+            // Plugins cannot redefine context properties from other plugins.
+            Object.defineProperty(context, key, {
+              ...Object.getOwnPropertyDescriptor(result.define, key),
+              configurable: false,
+            })
+          }
         }
         if (result.env) {
           env ||= createExtendedEnv(context)
