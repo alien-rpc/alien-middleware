@@ -7,6 +7,7 @@ import type {
   RouteMethod,
   RouterContext,
 } from './types'
+import { defineParsedURL } from './url.ts'
 
 type OneOrMany<T> = T | readonly T[]
 
@@ -58,10 +59,14 @@ export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
   let matcher: PathMatcher | undefined
 
   function router(context: MiddlewareContext<T>) {
+    // Ensure the `url` property exists (e.g. if this is called directly).
+    defineParsedURL(context)
+
     const { request, url } = context as RouterContext
     const method = request.method as RouteMethod
 
     matcher ||= compilePaths(paths)
+
     return matcher(url.pathname, (index, params) => {
       if (!filters[index] || filters[index](method)) {
         context.method = method

@@ -9,6 +9,7 @@ import {
   RequestMiddleware,
   ResponseMiddleware,
 } from './types'
+import { defineParsedURL } from './url.ts'
 
 const kRequestChain = Symbol('requestChain')
 const kResponseChain = Symbol('responseChain')
@@ -19,15 +20,6 @@ type InternalContext = AdapterRequestContext<any> & {
   [kMiddlewareCache]?: Set<RequestMiddleware | ResponseMiddleware>
   [kIgnoreNotFound]?: boolean
   url?: URL
-}
-
-const urlDescriptor: PropertyDescriptor = {
-  configurable: true,
-  get(this: InternalContext) {
-    const url = new URL(this.request.url)
-    Object.defineProperty(this, 'url', { value: url })
-    return url
-  },
 }
 
 export class MiddlewareChain<
@@ -101,10 +93,7 @@ function createHandler(
   async function handler(parentContext: InternalContext) {
     const context = Object.create(parentContext)
     context[kIgnoreNotFound] = true
-
-    if (!('url' in context)) {
-      Object.defineProperty(context, 'url', urlDescriptor)
-    }
+    defineParsedURL(context)
 
     // Avoid calling the same middleware twice.
     const cache = (context[kMiddlewareCache] ||= new Set())
