@@ -168,7 +168,7 @@ export type ApplyMiddleware<
         Merge<Env<TFirst>, Env<TSecond>>,
         Merge<Properties<TFirst>, Properties<TSecond>>
       >
-    : TSecond extends () => Awaitable<infer TResult>
+    : TSecond extends (...args: any[]) => Awaitable<infer TResult>
       ? TResult extends RequestPlugin
         ? ApplyRequestPlugin<TFirst, TResult>
         : Current<TFirst>
