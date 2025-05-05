@@ -128,11 +128,15 @@ function createHandler(
           break
         }
         for (const key in result) {
-          const descriptor = Object.getOwnPropertyDescriptor(result, key)!
           if (key === 'env') {
             env ||= createExtendedEnv(context)
-            Object.defineProperty(env, key, descriptor)
+            Object.defineProperties(
+              env,
+              Object.getOwnPropertyDescriptors(result.env)
+            )
           } else {
+            const descriptor = Object.getOwnPropertyDescriptor(result, key)!
+
             // Plugins cannot redefine context properties from other plugins.
             descriptor.configurable = false
             Object.defineProperty(context, key, descriptor)
