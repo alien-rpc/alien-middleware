@@ -30,7 +30,7 @@ describe('request middleware', () => {
       expect(ctx.foo).toBe(true)
     })
     expect(ware.length).toBe(1)
-    await app.use(() => ({ define: { foo: true } })).use(ware)(context)
+    await app.use(() => ({ foo: true })).use(ware)(context)
     expect(ware).toHaveBeenCalled()
   })
 
@@ -108,11 +108,9 @@ describe('nested middleware chains', () => {
 
 describe('merging middleware chains', () => {
   test('request middlewares are merged', async () => {
-    const nestedApp = chain(() => ({
-      define: { foo: true },
-    }))
+    const nestedApp = chain(() => ({ foo: true }))
 
-    const first = vi.fn((ctx: RequestContext) => {
+    const first = vi.fn((ctx: RequestContext<{ foo?: unknown }>) => {
       expect(ctx.foo).toBe(undefined)
     })
 
