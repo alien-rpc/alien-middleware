@@ -97,6 +97,8 @@ Request middleware runs sequentially before a `Response` is generated.
 - **Terminating the Chain:** Return a `Response` object to stop processing subsequent request middleware.
 
   ```typescript
+  import type { RequestContext } from 'alien-middleware'
+
   const earlyResponder = (context: RequestContext) => {
     if (context.request.url.endsWith('/forbidden')) {
       return new Response('Forbidden', { status: 403 })
@@ -105,19 +107,21 @@ Request middleware runs sequentially before a `Response` is generated.
   }
   ```
 
-- **Extending Context:** Return an object with a `define` property to add properties to the context for _downstream_ middleware.
+- **Extending Context:** Return an object (known as a "request plugin") to add its properties to the context for _downstream_ middleware. Getter syntax is supported.
 
   ```typescript
+  import type { RequestContext } from 'alien-middleware'
+
+  type User = { id: number; name: string }
+
   const addUser = (context: RequestContext) => {
     // In a real app, you might look up a user based on a token
-    const user = { id: 1, name: 'Alice' }
+    const user: User = { id: 1, name: 'Alice' }
 
-    return { define: { user } }
+    return { user }
   }
 
-  const greetUser = (
-    context: RequestContext<{ user: { id: number; name: string } }>
-  ) => {
+  const greetUser = (context: RequestContext<{ user: User }>) => {
     // The `user` property is now available thanks to `addUser`
     return new Response(`Hello, ${context.user.name}!`)
   }
@@ -125,14 +129,16 @@ Request middleware runs sequentially before a `Response` is generated.
   const app = chain().use(addUser).use(greetUser)
   ```
 
-- **Extending Environment:** Return an object with an `env` property to add environment variables accessible via `context.env()`.
+- **Extending Environment:** Request plugins may have an `env` property to add environment variables accessible via `context.env()`.
 
   ```typescript
+  import type { RequestContext } from 'alien-middleware'
+
   const addApiKey = (context: RequestContext) => {
     return { env: { API_KEY: 'secret123' } }
   }
 
-  const useApiKey = (context: RequestContext<{}, { API_KEY: string }>) => {
+  const useApiKey = (context: RequestContext<never, { API_KEY: string }>) => {
     const key = context.env('API_KEY')
     console.log('API Key:', key) // Output: API Key: secret123
   }
@@ -141,7 +147,7 @@ Request middleware runs sequentially before a `Response` is generated.
   ```
 
 > [!NOTE]
-> If you're wondering why you need to return a `{ define: { … } }` object
+> If you're wondering why you need to return an object to define properties
 > (rather than simply assigning to the context object), it's because TypeScript
 > is unable to infer the type of the context object downstream if you don't do
 > it like this.
@@ -182,7 +188,7 @@ another chain, since the outer chain will still have a chance to return a
 
 ### Nesting Chains
 
-You can compose middleware by nesting chains using `.use()`. Context modifications (`define`, `env`) within a nested chain are scoped to that chain and do not affect middleware outside of it.
+You can compose middleware by nesting chains using `.use()`. _Request plugins_ within a nested chain are scoped to that chain and do not affect middleware outside of it.
 
 ```typescript
 const innerChain = chain((context: RequestContext) => {

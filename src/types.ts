@@ -16,7 +16,7 @@ type RequestEnvPlugin = {
  * plugins, or an error will be thrown at runtime.
  *
  * May contain special properties:
- * - `$env`: Add type-safe environment variables.
+ * - `env`: Add type-safe environment variables.
  */
 export type RequestPlugin = Record<string, unknown> & RequestEnvPlugin
 
