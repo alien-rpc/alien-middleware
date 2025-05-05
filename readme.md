@@ -253,3 +253,110 @@ const myMiddleware = (context: RequestContext<any, Env>) => {
 ```
 
 In both examples, we skip declaring any additional context properties (the first type parameter) because we're not using any. The second type parameter is for environment variables. The third is for the special `context.platform` property, whose value is provided by the host platform (e.g. Node.js, Deno, Bun, etc). On principle, a middleware should avoid using the `context.platform` property, since that could make it non-portable unless you write extra fallback logic for other hosts.
+
+## Router
+
+The `routes` function provides a way to create a router instance for handling different paths and HTTP methods.
+
+```typescript
+import { routes } from 'alien-middleware/router'
+
+const router = routes()
+```
+
+### Path Parameter Type Inference
+
+The `routes` function leverages `pathic` to provide type inference for path parameters.
+
+```typescript
+import { routes } from 'alien-middleware/router'
+
+const router = routes()
+
+router.use('/users/:userId', context => {
+  // context.params.userId is automatically typed as string
+  const userId = context.params.userId
+  return new Response(`User ID: ${userId}`)
+})
+```
+
+### Handling Specific HTTP Methods
+
+You can specify one or more HTTP methods for a route by providing the method(s) as the first argument to `.use()`.
+
+```typescript
+import { routes } from 'alien-middleware/router'
+
+const router = routes()
+
+// This handler will only run for GET requests to /api/items
+router.use('GET', '/api/items', context => {
+  return new Response('List of items')
+})
+
+// This handler will only run for POST requests to /api/items
+router.use('POST', '/api/items', context => {
+  return new Response('Create a new item', { status: 201 })
+})
+
+// This handler will run for both PUT and PATCH requests to /api/items/:id
+router.use(['PUT', 'PATCH'], '/api/items/:id', context => {
+  const itemId = context.params.id
+  return new Response(`Update item ${itemId}`)
+})
+
+// This handler will run for any method to /status
+router.use('/status', context => {
+  return new Response('Status: OK')
+})
+```
+
+> [!NOTE]
+> Your routes don't need to be in any particular order, unless their path
+> patterns are exactly the same. The `pathic` library will match the most
+> specific path first. This allows you to split your routes into multiple files
+> for better organization.
+
+### Type-Safe Middleware with `routes()`
+
+You can pass a middleware chain to the `routes()` function to apply middleware specifically to the routes defined by that router instance. This provides type safety for context extensions within the router.
+
+```typescript
+import {
+  chain,
+  type RequestContext,
+  type RequestPlugin,
+} from 'alien-middleware'
+import { routes } from 'alien-middleware/router'
+
+// Define a middleware that adds a user to the context
+const addUserMiddleware = (context: RequestContext): RequestPlugin => {
+  const user = { id: 123, name: 'Alice' }
+  return { define: { user } }
+}
+
+// Create a chain with the middleware
+const authMiddlewares = chain(addUserMiddleware)
+
+// Pass the chain to the routes function
+const authenticatedRouter = routes(authMiddlewares)
+
+// Define a route that uses the context property added by the middleware
+authenticatedRouter.use('/profile', context => {
+  // context.user is now type-safe and available
+  return new Response(`Welcome, ${context.user.name}!`)
+})
+
+// Routes defined on a router without a chain won't have the user property
+const publicRouter = routes()
+
+publicRouter.use('/public', context => {
+  // context.user is not available here
+  // @ts-expect-error - user is not defined on this context
+  console.log(context.user)
+  return new Response('Public content')
+})
+
+// You can combine routers using .use()
+const app = chain().use(authenticatedRouter).use(publicRouter)
+```
