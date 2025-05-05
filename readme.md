@@ -215,17 +215,37 @@ const finalApp = chain().use(innerChain).use(outerMiddleware)
 //   innerData is correctly scoped.
 ```
 
-If a nested chain does not return a `Response`, execution continues with the next middleware in the outer chain.
+#### Escaping a Nested Chain
 
-### Merging Chains
+To escape a nested chain, use the `context.passThrough()` method. The outer chain will continue execution with the next middleware.
 
-You can merge two middleware chains using the `merge` method. This is useful if you want to combine middleware from multiple files or modules.
+### Isolated Chains
+
+When nesting a middleware chain in another, you can isolate the nested chain from the outer chain by calling `.isolate()`.
 
 ```typescript
-const mergedApp = chain().use(middleware1).merge(chain().use(middleware2))
-// …is equivalent to…
-const mergedApp = chain().use(middleware1).use(middleware2)
+const isolatedChain = chain().isolate()
 ```
+
+This prevents the nested chain from affecting middleware in the outer chain (e.g. through _request plugins_).
+
+```typescript
+const innerChain = chain()
+  .use(() => ({
+    foo: true,
+  }))
+  .use(ctx => {
+    ctx.foo // Output: true
+  })
+
+const outerChain = chain()
+  .use(innerChain.isolate())
+  .use(ctx => {
+    ctx.foo // Output: undefined
+  })
+```
+
+If an isolated chain does not return a `Response`, execution continues with the next middleware in the outer chain.
 
 ### Safe Environment Variables
 
