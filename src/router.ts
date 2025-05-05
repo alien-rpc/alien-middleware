@@ -1,7 +1,12 @@
 import { compilePaths, InferParams, PathMatcher } from 'pathic'
 import { isArray, isFunction } from 'radashi'
 import type { MiddlewareChain, MiddlewareContext } from './index'
-import type { RouteHandler, RouteMethod, RouterContext } from './types'
+import type {
+  EmptyMiddlewareChain,
+  RouteHandler,
+  RouteMethod,
+  RouterContext,
+} from './types'
 
 type OneOrMany<T> = T | readonly T[]
 
@@ -9,7 +14,9 @@ export type Router<T extends MiddlewareChain = any> = ReturnType<
   typeof routes<T>
 >
 
-export function routes<T extends MiddlewareChain>(middlewares?: T) {
+export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
+  middlewares?: T
+) {
   const paths: string[] = []
   const filters: (((method: RouteMethod) => boolean) | null)[] = []
   const handlers: RouteHandler[] = []

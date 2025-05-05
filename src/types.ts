@@ -151,17 +151,14 @@ export type ApplyMiddleware<
       >
     : RequestHandler<Inputs<TParent>, Current<TParent>, Platform<TParent>>
 
+export type EmptyMiddlewareChain = MiddlewareChain<
+  { properties: {}; env: {} },
+  { properties: {}; env: {} },
+  unknown
+>
+
 export type ApplyFirstMiddleware<T extends Middleware> =
-  T extends MiddlewareChain
-    ? T
-    : ApplyMiddleware<
-        MiddlewareChain<
-          { properties: {}; env: {} },
-          { properties: {}; env: {} },
-          unknown
-        >,
-        T
-      >
+  T extends MiddlewareChain ? T : ApplyMiddleware<EmptyMiddlewareChain, T>
 
 export type MergeMiddleware<
   TFirst extends MiddlewareChain,
