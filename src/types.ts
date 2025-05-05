@@ -55,8 +55,15 @@ type Intersectable<T extends object> = [T] extends [never]
     ? Record<PropertyKey, any>
     : T
 
+/**
+ * An extensible Hattip context object.
+ *
+ * NOTE: When using this type on the right side of an `extends` clause, you
+ * should prefer `RequestContext<any>` over `RequestContext` (no type
+ * parameters), as the default type is stricter.
+ */
 export type RequestContext<
-  TProperties extends object = any,
+  TProperties extends object = never,
   TEnv extends object = any,
   TPlatform = any,
 > = HattipContext<TPlatform, TEnv> & Intersectable<TProperties>
