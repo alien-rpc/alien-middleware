@@ -37,6 +37,8 @@ describe('request middleware', () => {
   test('extend environment variables', async () => {
     const ware = vi.fn((ctx: RequestContext<{}, { bar: boolean }>) => {
       expect(ctx.env('bar')).toBe(true)
+      // Expect missing keys are undefined.
+      expect(ctx.env('foo' as any)).toBe(undefined)
     })
     await app.use(() => ({ env: { bar: true } })).use(ware)(context)
     expect(ware).toHaveBeenCalled()
@@ -68,7 +70,7 @@ describe('response middleware', () => {
   })
 
   test('override response', async () => {
-    const ware = vi.fn((ctx: RequestContext, response: Response) => {
+    const ware = vi.fn(async (ctx: RequestContext, response: Response) => {
       return new Response(null, { status: 404 })
     })
 
@@ -154,4 +156,22 @@ describe('merging middleware chains', () => {
     expect(response.status).toBe(418)
     expect(calls).toBe(3)
   })
+
+  test('argument may be a middleware function', async () => {
+    const ware = vi.fn()
+
+    // Equivalent to `chain().use(ware)`
+    const app = chain().merge(ware)
+
+    const response = await app(context)
+    expect(response.status).toBe(404)
+    expect(ware).toHaveBeenCalled()
+  })
+})
+
+test('chain is a no-op if a middleware chain is passed', () => {
+  const chain1 = chain().use(noop)
+  const chain2 = chain(chain1)
+
+  expect(chain2).toBe(chain1)
 })

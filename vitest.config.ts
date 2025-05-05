@@ -4,5 +4,8 @@ export default defineConfig({
   test: {
     globals: true,
     isolate: false,
+    coverage: {
+      thresholds: { 100: true },
+    },
   },
 })

@@ -28,7 +28,7 @@
     "format": "prettier --write .",
     "lint": "tsc-lint",
     "test": "vitest",
-    "prepublishOnly": "pnpm test run && pnpm build"
+    "prepublishOnly": "pnpm test run --coverage && pnpm build"
   },
   "peerDependencies": {
     "@hattip/core": "*"
@@ -37,6 +37,7 @@
     "@alloc/prettier-config": "^1.0.0",
     "@hattip/core": "^0.0.49",
     "@types/node": "^22.15.3",
+    "@vitest/coverage-v8": "^3.1.3",
     "prettier": "^3.5.3",
     "radashi": "12.5.0-beta.6d5c035",
     "rimraf": "^6.0.1",
