@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      pathic:
+        specifier: ^0.1.6
+        version: 0.1.6
     devDependencies:
       '@alloc/prettier-config':
         specifier: ^1.0.0
@@ -587,6 +591,9 @@ packages:
 
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
+
+  pathic@0.1.6:
+    resolution: {integrity: sha512-6yst6gFkgVC9bf+gPeXjWZMIzY8iu5fVFvTfJbrkuFnEZ59hrEAUVdcMogEuUx5tT5tpSN+sYRTmKoeYA23s9w==}
 
   pathval@2.0.0:
     resolution: {integrity: sha512-vE7JKRyES09KiunauX7nd2Q9/L7lhok4smP9RZTDeD4MVs72Dp2qNFVz39Nz5a0FVEW0BJR6C0DYrq6unoziZA==}
@@ -1309,6 +1316,8 @@ snapshots:
       minipass: 7.1.2
 
   pathe@2.0.3: {}
+
+  pathic@0.1.6: {}
 
   pathval@2.0.0: {}
 

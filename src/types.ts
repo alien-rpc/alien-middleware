@@ -178,3 +178,26 @@ export type MergeMiddleware<
       : Current<TFirst>,
   Platform<TFirst>
 >
+
+export type RouteMethod =
+  | 'GET'
+  | 'POST'
+  | 'PUT'
+  | 'DELETE'
+  | 'PATCH'
+  | 'OPTIONS'
+  | 'HEAD'
+
+export type RouterContext<
+  T extends MiddlewareChain = any,
+  TPathParams extends object = any,
+  TMethod extends RouteMethod = RouteMethod,
+> = MiddlewareContext<T> & { params: TPathParams; method: TMethod }
+
+export type RouteHandler<
+  T extends MiddlewareChain = any,
+  TPathParams extends object = any,
+  TMethod extends RouteMethod = RouteMethod,
+> = (
+  context: RouterContext<T, TPathParams, TMethod>
+) => Awaitable<Response | void>
