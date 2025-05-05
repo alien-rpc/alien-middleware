@@ -2,16 +2,23 @@ import type { AdapterRequestContext, HattipHandler } from '@hattip/core'
 import { Any } from 'radashi'
 import type { MiddlewareChain } from './index.ts'
 
-export type RequestPlugin = {
+type RequestEnvPlugin = {
   /**
-   * Define properties on the request context.
-   */
-  define?: object
-  /**
-   * Add type-safe environment variables.
+   * Add type-safe environment variables. These are accessed with the `env()`
+   * method on the request context.
    */
   env?: object
 }
+
+/**
+ * The object returned by a request middleware that is merged into the request
+ * context. The same context property cannot be defined by two different
+ * plugins, or an error will be thrown at runtime.
+ *
+ * May contain special properties:
+ * - `$env`: Add type-safe environment variables.
+ */
+export type RequestPlugin = Record<string, unknown> & RequestEnvPlugin
 
 type Inputs<T extends MiddlewareChain> = T['$']['input']
 type Platform<T extends MiddlewareChain> = T['$']['platform']
@@ -136,7 +143,7 @@ type ApplyRequestPlugin<
   TParent extends MiddlewareChain,
   TPlugin extends RequestPlugin,
 > = {
-  properties: Merge<Properties<TParent>, TPlugin['define']>
+  properties: Merge<Properties<TParent>, Omit<TPlugin, keyof RequestEnvPlugin>>
   env: Merge<Env<TParent>, TPlugin['env']>
 }
 

@@ -127,18 +127,16 @@ function createHandler(
           response = result
           break
         }
-        if (result.define) {
-          for (const key in result.define) {
+        for (const key in result) {
+          const descriptor = Object.getOwnPropertyDescriptor(result, key)!
+          if (key === 'env') {
+            env ||= createExtendedEnv(context)
+            Object.defineProperty(env, key, descriptor)
+          } else {
             // Plugins cannot redefine context properties from other plugins.
-            Object.defineProperty(context, key, {
-              ...Object.getOwnPropertyDescriptor(result.define, key),
-              configurable: false,
-            })
+            descriptor.configurable = false
+            Object.defineProperty(context, key, descriptor)
           }
-        }
-        if (result.env) {
-          env ||= createExtendedEnv(context)
-          Object.assign(env, result.env)
         }
       }
     }
