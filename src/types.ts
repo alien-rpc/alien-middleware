@@ -31,11 +31,11 @@ type Properties<T extends MiddlewareChain> = Current<T>['properties']
 type Env<T extends MiddlewareChain> = Current<T>['env']
 
 export type MiddlewareTypes<
-  TProperties extends object = any,
   TEnv extends object = any,
+  TProperties extends object = any,
 > = {
-  properties: TProperties
   env: TEnv
+  properties: TProperties
 }
 
 // This interface exists to reduce visual noise when hovering on a
@@ -70,8 +70,8 @@ type Intersectable<T extends object> = [T] extends [never]
  * parameters), as the default type is stricter.
  */
 export type RequestContext<
-  TProperties extends object = never,
   TEnv extends object = any,
+  TProperties extends object = never,
   TPlatform = any,
 > = HattipContext<TPlatform, TEnv> & Intersectable<TProperties>
 
@@ -81,8 +81,8 @@ export type RequestContext<
  * When type `T` is `never`, a default context is returned.
  */
 export type MiddlewareContext<T extends MiddlewareChain> = [T] extends [never]
-  ? RequestContext<{}, {}, unknown>
-  : RequestContext<Properties<T>, Env<T>, Platform<T>>
+  ? RequestContext<{}, never, unknown>
+  : RequestContext<Env<T>, Properties<T>, Platform<T>>
 
 export type IsolatedContext<T extends MiddlewareChain> = RequestContext<
   InputProperties<T>,
@@ -115,11 +115,11 @@ export type RequestHandler<
  * by a request middleware.
  */
 export type Middleware<
-  TProperties extends object = any,
   TEnv extends object = any,
+  TProperties extends object = any,
   TPlatform = any,
 > = (
-  context: RequestContext<TProperties, TEnv, TPlatform>,
+  context: RequestContext<TEnv, TProperties, TPlatform>,
   response: Response
 ) => Awaitable<Response | RequestPlugin | void>
 
@@ -127,8 +127,8 @@ export type Middleware<
  * Extract a `Middleware` type from a `MiddlewareChain` type.
  */
 export type ExtractMiddleware<T extends MiddlewareChain> = Middleware<
-  Properties<T>,
   Env<T>,
+  Properties<T>,
   Platform<T>
 >
 
@@ -148,10 +148,10 @@ type Merge<
 type ApplyRequestPlugin<
   TParent extends MiddlewareChain,
   TPlugin extends RequestPlugin,
-> = {} & {
-  properties: Merge<Properties<TParent>, Omit<TPlugin, keyof RequestEnvPlugin>>
-  env: Merge<Env<TParent>, TPlugin['env']>
-}
+> = {} & MiddlewareTypes<
+  Merge<Env<TParent>, TPlugin['env']>,
+  Merge<Properties<TParent>, Omit<TPlugin, keyof RequestEnvPlugin>>
+>
 
 /**
  * This applies a middleware to a chain. If the type `TMiddleware` is itself a
@@ -160,14 +160,14 @@ type ApplyRequestPlugin<
  */
 export type ApplyMiddleware<
   TFirst extends MiddlewareChain,
-  TSecond extends Middleware<Properties<TFirst>, Env<TFirst>, Platform<TFirst>>,
+  TSecond extends Middleware<Env<TFirst>, Properties<TFirst>, Platform<TFirst>>,
 > = RequestHandler<
   Inputs<TFirst>,
   TSecond extends MiddlewareChain
-    ? {
-        properties: Merge<Properties<TFirst>, Properties<TSecond>>
-        env: Merge<Env<TFirst>, Env<TSecond>>
-      }
+    ? MiddlewareTypes<
+        Merge<Env<TFirst>, Env<TSecond>>,
+        Merge<Properties<TFirst>, Properties<TSecond>>
+      >
     : TSecond extends () => Awaitable<infer TResult>
       ? TResult extends RequestPlugin
         ? ApplyRequestPlugin<TFirst, TResult>
@@ -177,8 +177,8 @@ export type ApplyMiddleware<
 >
 
 export type EmptyMiddlewareChain = MiddlewareChain<
-  { properties: {}; env: {} },
-  { properties: {}; env: {} },
+  MiddlewareTypes<{}, {}>,
+  MiddlewareTypes<{}, {}>,
   unknown
 >
 

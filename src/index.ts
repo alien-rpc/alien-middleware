@@ -193,12 +193,12 @@ function createExtendedEnv(context: InternalContext) {
 }
 
 export function chain<
-  TProperties extends object = {},
   TEnv extends object = {},
+  TProperties extends object = {},
   TPlatform = unknown,
 >(): MiddlewareChain<
-  { env: TEnv; properties: TProperties },
-  { env: TEnv; properties: TProperties },
+  MiddlewareTypes<TEnv, TProperties>,
+  MiddlewareTypes<TEnv, TProperties>,
   TPlatform
 >
 
