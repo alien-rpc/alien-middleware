@@ -121,7 +121,7 @@ Request middleware runs sequentially before a `Response` is generated.
     return { user }
   }
 
-  const greetUser = (context: RequestContext<{ user: User }>) => {
+  const greetUser = (context: RequestContext<{}, { user: User }>) => {
     // The `user` property is now available thanks to `addUser`
     return new Response(`Hello, ${context.user.name}!`)
   }
@@ -138,7 +138,7 @@ Request middleware runs sequentially before a `Response` is generated.
     return { env: { API_KEY: 'secret123' } }
   }
 
-  const useApiKey = (context: RequestContext<never, { API_KEY: string }>) => {
+  const useApiKey = (context: RequestContext<{ API_KEY: string }>) => {
     const key = context.env('API_KEY')
     console.log('API Key:', key) // Output: API Key: secret123
   }
@@ -267,7 +267,7 @@ type Env = {
   API_KEY: string
 }
 
-const app = chain<any, Env>().use(context => {
+const app = chain<Env>().use(context => {
   const key = context.env('API_KEY')
   //    ^? string
 })
@@ -279,7 +279,7 @@ When defining a middleware, you can declare env types that the middleware expect
 import type { RequestContext } from 'alien-middleware'
 
 // Assuming `Env` is defined like in the previous example.
-const myMiddleware = (context: RequestContext<any, Env>) => {
+const myMiddleware = (context: RequestContext<Env>) => {
   const key = context.env('API_KEY')
 }
 ```
