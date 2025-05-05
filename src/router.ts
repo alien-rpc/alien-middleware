@@ -22,6 +22,8 @@ export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
   const filters: (((method: RouteMethod) => boolean) | null)[] = []
   const handlers: RouteHandler[] = []
 
+  let matcher: PathMatcher | undefined
+
   type Router = typeof router
 
   function use<TPath extends string>(
@@ -53,10 +55,9 @@ export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
       )
       handlers.push(handler!)
     }
+    matcher = undefined
     return router
   }
-
-  let matcher: PathMatcher | undefined
 
   function router(context: MiddlewareContext<T>) {
     // Ensure the `url` property exists (e.g. if this is called directly).
