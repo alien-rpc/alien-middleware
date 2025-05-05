@@ -1,11 +1,13 @@
 import { AdapterRequestContext } from '@hattip/core'
+import { isFunction, noop } from 'radashi'
 import {
   ApplyFirstMiddleware,
   ApplyMiddleware,
   ExtractMiddleware,
-  MergeMiddleware,
+  IsolatedContext,
   Middleware,
   MiddlewareTypes,
+  RequestContext,
   RequestMiddleware,
   ResponseMiddleware,
 } from './types'
@@ -48,11 +50,21 @@ export class MiddlewareChain<
    * treated as a response middleware. Otherwise, it will be treated as a
    * request middleware.
    *
+   * If a middleware chain is given, its middlewares will be executed after any
+   * existing middlewares in this chain.
+   *
    * @returns a new `MiddlewareChain` instance
    */
   use<const TMiddleware extends ExtractMiddleware<this>>(
     middleware: TMiddleware
   ): ApplyMiddleware<this, TMiddleware> {
+    if (middleware instanceof MiddlewareChain) {
+      return createHandler(
+        [...this[kRequestChain], ...middleware[kRequestChain]],
+        [...this[kResponseChain], ...middleware[kResponseChain]]
+      )
+    }
+
     let requestChain = this[kRequestChain]
     let responseChain = this[kResponseChain]
 
@@ -66,23 +78,13 @@ export class MiddlewareChain<
   }
 
   /**
-   * Merge two middleware chains. The middlewares from the second chain will be
-   * executed after the middlewares from the first chain.
-   *
-   * For ease of use, this method may be given a middleware function, which
-   * short-circuits to the `use` method. You should prefer using the `use`
-   * method directly, if possible.
+   * Create a middleware function that encapsulates this middleware chain, so
+   * any modifications it makes to the request context are not leaked.
    */
-  merge<TMiddleware extends ExtractMiddleware<this>>(
-    chain: TMiddleware
-  ): MergeMiddleware<this, TMiddleware> {
-    if (chain instanceof MiddlewareChain) {
-      return createHandler(
-        [...this[kRequestChain], ...chain[kRequestChain]],
-        [...this[kResponseChain], ...chain[kResponseChain]]
-      )
-    }
-    return this.use(chain) as any
+  isolate() {
+    return isFunction(this)
+      ? (ctx: IsolatedContext<this>): Promise<Response | void> => this(ctx)
+      : noop
   }
 }
 
@@ -201,7 +203,6 @@ export function chain<const T extends Middleware = Middleware>(middleware?: T) {
 export type {
   ApplyMiddleware,
   ExtractMiddleware,
-  MergeMiddleware,
   Middleware,
   MiddlewareContext,
   RequestContext,

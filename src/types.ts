@@ -84,6 +84,12 @@ export type MiddlewareContext<T extends MiddlewareChain> = [T] extends [never]
   ? RequestContext<{}, {}, unknown>
   : RequestContext<Properties<T>, Env<T>, Platform<T>>
 
+export type IsolatedContext<T extends MiddlewareChain> = RequestContext<
+  InputProperties<T>,
+  InputEnv<T>,
+  Platform<T>
+>
+
 type Awaitable<T> = T | Promise<T>
 
 export type RequestMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
@@ -153,28 +159,6 @@ type ApplyRequestPlugin<
  * parent chain.
  */
 export type ApplyMiddleware<
-  TParent extends MiddlewareChain,
-  TMiddleware,
-> = TMiddleware extends MiddlewareChain
-  ? RequestHandler<Inputs<TParent>, Current<TParent>, Platform<TParent>>
-  : TMiddleware extends () => Awaitable<infer TPlugin extends RequestPlugin>
-    ? RequestHandler<
-        Inputs<TParent>,
-        ApplyRequestPlugin<TParent, TPlugin>,
-        Platform<TParent>
-      >
-    : RequestHandler<Inputs<TParent>, Current<TParent>, Platform<TParent>>
-
-export type EmptyMiddlewareChain = MiddlewareChain<
-  { properties: {}; env: {} },
-  { properties: {}; env: {} },
-  unknown
->
-
-export type ApplyFirstMiddleware<T extends Middleware> =
-  T extends MiddlewareChain ? T : ApplyMiddleware<EmptyMiddlewareChain, T>
-
-export type MergeMiddleware<
   TFirst extends MiddlewareChain,
   TSecond extends Middleware<Properties<TFirst>, Env<TFirst>, Platform<TFirst>>,
 > = RequestHandler<
@@ -184,11 +168,22 @@ export type MergeMiddleware<
         properties: Merge<Properties<TFirst>, Properties<TSecond>>
         env: Merge<Env<TFirst>, Env<TSecond>>
       }
-    : TSecond extends () => Awaitable<infer TPlugin extends RequestPlugin>
-      ? ApplyRequestPlugin<TFirst, TPlugin>
+    : TSecond extends () => Awaitable<infer TResult>
+      ? TResult extends RequestPlugin
+        ? ApplyRequestPlugin<TFirst, TResult>
+        : Current<TFirst>
       : Current<TFirst>,
   Platform<TFirst>
 >
+
+export type EmptyMiddlewareChain = MiddlewareChain<
+  { properties: {}; env: {} },
+  { properties: {}; env: {} },
+  unknown
+>
+
+export type ApplyFirstMiddleware<T extends Middleware> =
+  T extends MiddlewareChain ? T : ApplyMiddleware<EmptyMiddlewareChain, T>
 
 export type RouteMethod =
   | 'GET'
