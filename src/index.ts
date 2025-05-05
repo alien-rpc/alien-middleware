@@ -140,6 +140,10 @@ function createHandler(
       }
       response = new Response('Not Found', { status: 404 })
     }
+    // Ensure the response's headers can be modified.
+    else if (response.type !== 'default') {
+      response = new Response(response.body, response)
+    }
 
     for (const middleware of responseChain) {
       if (cache.has(middleware)) {
