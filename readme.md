@@ -186,42 +186,25 @@ request middlewares, **except** when the middleware chain is nested inside
 another chain, since the outer chain will still have a chance to return a
 `Response`.
 
-### Nesting Chains
+### Merging a Middleware Chain
 
-You can compose middleware by nesting chains using `.use()`. _Request plugins_ within a nested chain are scoped to that chain and do not affect middleware outside of it.
+By passing a middleware chain to `.use()`, you can merge it with the existing chain. Its middlewares will be executed _after_ any existing middlewares in this chain and _before_ any new middlewares you add later.
 
 ```typescript
 const innerChain = chain((context: RequestContext) => {
-  console.log('Inner chain start')
-  return { define: { innerData: 'secret' } } // Only available inside innerChain
-}).use((context: RequestContext<{ innerData: string }>) => {
-  console.log('Accessing inner data:', context.innerData)
+  return { helloFromInner: true }
 })
 
-const outerMiddleware = (context: RequestContext) => {
-  // context.innerData is not accessible here
-  console.log('Outer middleware after inner chain')
-  if (!('innerData' in context)) {
-    console.log('innerData is correctly scoped.')
-  }
-  return new Response('Finished')
-}
-
-const finalApp = chain().use(innerChain).use(outerMiddleware)
-// Output when executing the finalApp chain:
-//   Inner chain start
-//   Accessing inner data: secret
-//   Outer middleware after inner chain
-//   innerData is correctly scoped.
+const app = chain()
+  .use(innerChain)
+  .use(context => {
+    context.helloFromInner // Output: true
+  })
 ```
 
-#### Escaping a Nested Chain
+### Isolating a Middleware Chain
 
-To escape a nested chain, use the `context.passThrough()` method. The outer chain will continue execution with the next middleware.
-
-### Isolated Chains
-
-When nesting a middleware chain in another, you can isolate the nested chain from the outer chain by calling `.isolate()`.
+When adding a middleware chain to another, you may use the `isolate()` method to isolate the nested chain from the outer chain.
 
 ```typescript
 const isolatedChain = chain().isolate()
@@ -234,18 +217,41 @@ const innerChain = chain()
   .use(() => ({
     foo: true,
   }))
-  .use(ctx => {
-    ctx.foo // Output: true
+  .use(context => {
+    context.foo // Output: true
   })
 
 const outerChain = chain()
   .use(innerChain.isolate())
-  .use(ctx => {
-    ctx.foo // Output: undefined
+  .use(context => {
+    context.foo // Output: undefined
   })
 ```
 
 If an isolated chain does not return a `Response`, execution continues with the next middleware in the outer chain.
+
+### Escaping a Middleware Chain
+
+To stop processing a request (e.g. skip any remaining middlewares), use the `context.passThrough()` method. The Hattip adapter is responsible for deciding the appropriate action based on the request.
+
+In the context of an isolated chain, `context.passThrough()` will skip remaining middlewares in the isolated chain, but the outer chain will continue execution with the next middleware.
+
+```ts
+const app = chain()
+  .use(context => {
+    if (!context.request.headers.has('Authorization')) {
+      // It's best practice to return immediately after
+      // calling passThrough()
+      return context.passThrough()
+    }
+    return new Response('Authorized', { status: 200 })
+  })
+  .use(context => {
+    // This will never run, since the previous middleware
+    // either returns a Response or calls passThrough()
+    throw new Error('This request middleware will never run')
+  })
+```
 
 ### Safe Environment Variables
 
@@ -358,7 +364,7 @@ import { routes } from 'alien-middleware/router'
 // Define a middleware that adds a user to the context
 const addUserMiddleware = (context: RequestContext): RequestPlugin => {
   const user = { id: 123, name: 'Alice' }
-  return { define: { user } }
+  return { user }
 }
 
 // Create a chain with the middleware
