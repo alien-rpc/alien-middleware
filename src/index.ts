@@ -210,8 +210,8 @@ export function chain<const T extends Middleware = Middleware>(middleware?: T) {
   if (middleware instanceof MiddlewareChain) {
     return middleware
   }
-  const handler = new MiddlewareChain()
-  return middleware ? handler.use(middleware) : handler
+  const empty = new MiddlewareChain()
+  return middleware ? empty.use(middleware) : empty
 }
 
 export type {
