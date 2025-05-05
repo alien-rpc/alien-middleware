@@ -1,4 +1,6 @@
 import { AdapterRequestContext } from '@hattip/core'
+import { createServer } from 'node:http'
+import { AddressInfo } from 'node:net'
 import { noop } from 'radashi'
 import { chain } from '../src/index.ts'
 import { RequestContext } from '../src/types.ts'
@@ -174,4 +176,32 @@ test('chain is a no-op if a middleware chain is passed', () => {
   const chain2 = chain(chain1)
 
   expect(chain2).toBe(chain1)
+})
+
+test('response is cloned if its type is not "default"', async () => {
+  const fetcher = vi.fn(
+    () =>
+      new Promise<Response>(resolve => {
+        const server = createServer((req, res) => {
+          res.end('Hello, world!')
+        })
+        server.listen(() => {
+          const { port } = server.address() as AddressInfo
+          resolve(
+            fetch(`http://localhost:${port}/`).finally(() => {
+              server.close()
+            })
+          )
+        })
+      })
+  )
+
+  const response = await app.use(fetcher).use((ctx, response) => {
+    response.headers.set('x-test', 'test')
+  })(context)
+
+  expect(fetcher).toHaveBeenCalled()
+  expect(response.status).toBe(200)
+  expect(await response.text()).toBe('Hello, world!')
+  expect(response.headers.get('x-test')).toBe('test')
 })
