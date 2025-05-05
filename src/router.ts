@@ -58,9 +58,11 @@ export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
   let matcher: PathMatcher | undefined
 
   function router(context: MiddlewareContext<T>) {
+    const { request, url } = context as RouterContext
+    const method = request.method as RouteMethod
+
     matcher ||= compilePaths(paths)
-    const method = context.request.method as RouteMethod
-    return matcher(context.request.path, (index, params) => {
+    return matcher(url.pathname, (index, params) => {
       if (!filters[index] || filters[index](method)) {
         context.method = method
         context.params = params
