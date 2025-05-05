@@ -28,7 +28,7 @@ test('chaining is pure', async () => {
 
 describe('request middleware', () => {
   test('define new properties', async () => {
-    const ware = vi.fn((ctx: RequestContext<{ foo: boolean }>) => {
+    const ware = vi.fn((ctx: RequestContext<{}, { foo: boolean }>) => {
       expect(ctx.foo).toBe(true)
     })
     expect(ware.length).toBe(1)
@@ -37,7 +37,7 @@ describe('request middleware', () => {
   })
 
   test('extend environment variables', async () => {
-    const ware = vi.fn((ctx: RequestContext<{}, { bar: boolean }>) => {
+    const ware = vi.fn((ctx: RequestContext<{ bar: boolean }>) => {
       expect(ctx.env('bar')).toBe(true)
       // Expect missing keys are undefined.
       expect(ctx.env('foo' as any)).toBe(undefined)
@@ -128,11 +128,11 @@ describe('merging middleware chains', () => {
   test('request middlewares are merged', async () => {
     const nestedApp = chain(() => ({ foo: true }))
 
-    const first = vi.fn((ctx: RequestContext<{ foo?: unknown }>) => {
+    const first = vi.fn((ctx: RequestContext<{}, { foo?: unknown }>) => {
       expect(ctx.foo).toBe(undefined)
     })
 
-    const last = vi.fn((ctx: RequestContext<{ foo: boolean }>) => {
+    const last = vi.fn((ctx: RequestContext<{}, { foo: boolean }>) => {
       expect(ctx.foo).toBe(true)
     })
 
