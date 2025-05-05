@@ -7,7 +7,7 @@ const urlDescriptor: PropertyDescriptor = {
   },
 }
 
-export function defineParsedURL(context: { request: Request; url: URL }) {
+export function defineParsedURL(context: { request: Request; url?: URL }) {
   if (!('url' in context)) {
     Object.defineProperty(context, 'url', urlDescriptor)
   }

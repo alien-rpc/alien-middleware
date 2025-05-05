@@ -93,9 +93,16 @@ function createHandler(
   responseChain: ResponseMiddleware[]
 ): any {
   async function handler(parentContext: InternalContext) {
-    const context = Object.create(parentContext)
+    const context = Object.create(parentContext) as InternalContext
     context[kIgnoreNotFound] = true
     defineParsedURL(context)
+
+    const { passThrough } = context
+
+    let shouldPassThrough = false
+    context.passThrough = () => {
+      shouldPassThrough = true
+    }
 
     // Avoid calling the same middleware twice.
     const cache = (context[kMiddlewareCache] ||= new Set())
@@ -108,9 +115,12 @@ function createHandler(
         continue
       }
       cache.add(middleware)
-      let result = middleware(context)
+      let result = middleware(context as RequestContext)
       if (result instanceof Promise) {
         result = await result
+      }
+      if (shouldPassThrough) {
+        break
       }
       // If defined, it's a response or a plugin.
       if (result) {
@@ -141,6 +151,10 @@ function createHandler(
         return // …instead of issuing a 404 Response.
       }
       response = new Response('Not Found', { status: 404 })
+      if (shouldPassThrough) {
+        passThrough()
+        return response
+      }
     }
     // Ensure the response's headers can be modified.
     else if (response.type !== 'default') {
@@ -152,7 +166,7 @@ function createHandler(
         continue
       }
       cache.add(middleware)
-      let result = middleware(context, response)
+      let result = middleware(context as RequestContext, response)
       if (result instanceof Promise) {
         result = await result
       }
