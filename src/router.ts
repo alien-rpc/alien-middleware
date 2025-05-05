@@ -68,3 +68,5 @@ export function routes<T extends MiddlewareChain>(middlewares?: T) {
   router.use = use
   return router
 }
+
+export type { RouteHandler, RouterContext } from './types.ts'
