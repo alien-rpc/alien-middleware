@@ -28,7 +28,7 @@
     "format": "prettier --write .",
     "lint": "tsc-lint",
     "test": "vitest",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm test run && pnpm build"
   },
   "peerDependencies": {
     "@hattip/core": "*"
