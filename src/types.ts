@@ -148,7 +148,7 @@ type Merge<
 type ApplyRequestPlugin<
   TParent extends MiddlewareChain,
   TPlugin extends RequestPlugin,
-> = {
+> = {} & {
   properties: Merge<Properties<TParent>, Omit<TPlugin, keyof RequestEnvPlugin>>
   env: Merge<Env<TParent>, TPlugin['env']>
 }
