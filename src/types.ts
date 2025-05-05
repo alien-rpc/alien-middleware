@@ -70,7 +70,7 @@ export type MiddlewareContext<T extends MiddlewareChain> = [T] extends [never]
   ? RequestContext<{}, {}, unknown>
   : RequestContext<Properties<T>, Env<T>, Platform<T>>
 
-type Awaitable<T> = T | PromiseLike<T>
+type Awaitable<T> = T | Promise<T>
 
 export type RequestMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
   context: RequestContext<InputProperties<T>, InputEnv<T>, Platform<T>>

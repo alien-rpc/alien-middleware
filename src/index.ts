@@ -1,5 +1,4 @@
 import { AdapterRequestContext } from '@hattip/core'
-import { isPromise } from 'radashi'
 import {
   ApplyFirstMiddleware,
   ApplyMiddleware,
@@ -119,7 +118,7 @@ function createHandler(
       }
       cache.add(middleware)
       let result = middleware(context)
-      if (isPromise(result)) {
+      if (result instanceof Promise) {
         result = await result
       }
       // If defined, it's a response or a plugin.
@@ -157,7 +156,7 @@ function createHandler(
       }
       cache.add(middleware)
       let result = middleware(context, response)
-      if (isPromise(result)) {
+      if (result instanceof Promise) {
         result = await result
       }
       if (result && result instanceof Response) {
