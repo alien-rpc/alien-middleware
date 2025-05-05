@@ -53,6 +53,35 @@ describe('request middleware', () => {
     await app.use(() => new Response(null, { status: 418 })).use(ware)(context)
     expect(ware).not.toHaveBeenCalled()
   })
+
+  test('use context.passThrough() to skip remaining middlewares', async () => {
+    const ware = vi.fn((ctx: RequestContext) => {
+      ctx.passThrough()
+    })
+    const responseHandler = vi.fn(
+      (ctx: RequestContext, response: Response) => {}
+    )
+
+    const response = await app
+      .use(ware)
+      .use(() => new Response(null, { status: 418 }))
+      .use(responseHandler)(context)
+
+    expect(ware).toHaveBeenCalled()
+    expect(response.status).toBe(404)
+    expect(responseHandler).not.toHaveBeenCalled()
+  })
+
+  test('access the parsed URL through context.url', async () => {
+    const ware = vi.fn((ctx: RequestContext) => {
+      const url = ctx.url
+      expect(url).toBe(ctx.url) // The URL is cached.
+      expect(url).toBeInstanceOf(URL)
+      expect(url.pathname).toBe('/')
+    })
+    await app.use(ware)(context)
+    expect(ware).toHaveBeenCalled()
+  })
 })
 
 describe('response middleware', () => {
@@ -95,21 +124,6 @@ describe('response middleware', () => {
   })
 })
 
-describe('nested middleware chains', () => {
-  test('plugins do not leak', async () => {
-    const nestedApp = chain(() => ({
-      define: { foo: true },
-    }))
-
-    const ware = vi.fn((ctx: RequestContext) => {
-      expect('foo' in ctx).toBe(false)
-    })
-
-    await app.use(nestedApp).use(ware)(context)
-    expect(ware).toHaveBeenCalled()
-  })
-})
-
 describe('merging middleware chains', () => {
   test('request middlewares are merged', async () => {
     const nestedApp = chain(() => ({ foo: true }))
@@ -122,7 +136,7 @@ describe('merging middleware chains', () => {
       expect(ctx.foo).toBe(true)
     })
 
-    const app = chain().use(first).merge(nestedApp).use(last)
+    const app = chain().use(first).use(nestedApp).use(last)
 
     const response = await app.use(first)(context)
     expect(response.status).toBe(404)
@@ -152,23 +166,26 @@ describe('merging middleware chains', () => {
       expect(response.status).toBe(418)
     })
 
-    const app = chain().use(first).merge(nestedApp).use(last)
+    const app = chain().use(first).use(nestedApp).use(last)
 
     const response = await app.use(first)(context)
     expect(response.status).toBe(418)
     expect(calls).toBe(3)
   })
+})
 
-  test('argument may be a middleware function', async () => {
-    const ware = vi.fn()
+test('middleware chains can be isolated', async () => {
+  const nestedApp = chain(() => ({ foo: true }))
 
-    // Equivalent to `chain().use(ware)`
-    const app = chain().merge(ware)
-
-    const response = await app(context)
-    expect(response.status).toBe(404)
-    expect(ware).toHaveBeenCalled()
+  const ware = vi.fn((ctx: RequestContext) => {
+    expect('foo' in ctx).toBe(false)
   })
+
+  await app.use(nestedApp.isolate()).use(ware)(context)
+  expect(ware).toHaveBeenCalled()
+
+  // An empty chain returns noop.
+  expect(chain().isolate()).toBe(noop)
 })
 
 test('chain is a no-op if a middleware chain is passed', () => {
