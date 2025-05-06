@@ -207,6 +207,16 @@ export type ApplyMiddleware<
       }>
     : never
 
+/**
+ * Apply a list of middlewares to an empty middleware chain.
+ */
+export type ApplyMiddlewares<T extends Middleware[]> = T extends [
+  ...infer TRest extends Middleware[],
+  infer TLast extends Middleware,
+]
+  ? ApplyMiddleware<ApplyMiddlewares<TRest>, TLast>
+  : ApplyFirstMiddleware<T[0]>
+
 export type EmptyMiddlewareChain<TPlatform = unknown> = MiddlewareChain<{
   initial: { env: {}; properties: {} }
   current: { env: {}; properties: {} }
