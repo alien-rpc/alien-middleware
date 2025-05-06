@@ -9,23 +9,23 @@ import {
   MiddlewareTypes,
   RequestContext,
   RequestMiddleware,
-  ResponseMiddleware,
+  ResponseCallback,
 } from './types'
 import { Awaitable } from './types/common.ts'
 import { defineParsedURL } from './url.ts'
 
 const kRequestChain = Symbol('requestChain')
-const kResponseChain = Symbol('responseChain')
 const kIgnoreNotFound = Symbol('ignoreNotFound')
 const kMiddlewareCache = Symbol('middlewareCache')
 const kResponseHeaders = Symbol('responseHeaders')
 
 type InternalContext = AdapterRequestContext<any> & {
   [kIgnoreNotFound]?: boolean
-  [kMiddlewareCache]?: Set<RequestMiddleware | ResponseMiddleware>
+  [kMiddlewareCache]?: Set<RequestMiddleware>
   [kResponseHeaders]?: Headers | undefined
   url?: URL
   setHeader?: (name: string, value: string) => void
+  onResponse?: (callback: ResponseCallback) => void
 }
 
 export class MiddlewareChain<T extends MiddlewareTypes = any> {
@@ -36,12 +36,9 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
   declare readonly length: 1
 
   protected [kRequestChain]: RequestMiddleware[] = []
-  protected [kResponseChain]: ResponseMiddleware[] = []
 
   /**
-   * Attach a middleware. If the `response` parameter is declared, it will be
-   * treated as a response middleware. Otherwise, it will be treated as a
-   * request middleware.
+   * Add a request middleware to the end of the chain.
    *
    * If a middleware chain is given, its middlewares will be executed after any
    * existing middlewares in this chain.
@@ -51,23 +48,11 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
   use<const TMiddleware extends ExtractMiddleware<this>>(
     middleware: TMiddleware
   ): ApplyMiddleware<this, TMiddleware> {
-    if (middleware instanceof MiddlewareChain) {
-      return createHandler(
-        [...this[kRequestChain], ...middleware[kRequestChain]],
-        [...this[kResponseChain], ...middleware[kResponseChain]]
-      )
-    }
-
-    let requestChain = this[kRequestChain]
-    let responseChain = this[kResponseChain]
-
-    if (middleware.length < 2) {
-      requestChain = [...requestChain, middleware as any]
-    } else {
-      responseChain = [...responseChain, middleware as any]
-    }
-
-    return createHandler(requestChain, responseChain)
+    return createHandler(
+      middleware instanceof MiddlewareChain
+        ? [...this[kRequestChain], ...middleware[kRequestChain]]
+        : [...this[kRequestChain], middleware]
+    )
   }
 
   /**
@@ -79,10 +64,7 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
   }
 }
 
-function createHandler(
-  requestChain: RequestMiddleware[],
-  responseChain: ResponseMiddleware[]
-): any {
+function createHandler(requestChain: RequestMiddleware[]): any {
   async function handler(parentContext: InternalContext) {
     const context = Object.create(parentContext) as InternalContext
     context[kIgnoreNotFound] = true
@@ -102,6 +84,12 @@ function createHandler(
         context[kResponseHeaders] = new Headers(parentContext[kResponseHeaders])
       }
       context[kResponseHeaders]!.set(name, value)
+    }
+
+    const responseChain: ResponseCallback[] = []
+
+    context.onResponse = callback => {
+      responseChain.push(callback)
     }
 
     // Avoid calling the same middleware twice.
@@ -132,11 +120,17 @@ function createHandler(
         }
         for (const key in result) {
           if (key === 'env') {
-            env ||= createExtendedEnv(context)
-            Object.defineProperties(
-              env,
-              Object.getOwnPropertyDescriptors(result.env)
-            )
+            if (result.env) {
+              env ||= createExtendedEnv(context)
+              Object.defineProperties(
+                env,
+                Object.getOwnPropertyDescriptors(result.env)
+              )
+            }
+          } else if (key === 'onResponse') {
+            if (result.onResponse) {
+              responseChain.push(result.onResponse)
+            }
           } else {
             const descriptor = Object.getOwnPropertyDescriptor(result, key)!
 
@@ -167,19 +161,15 @@ function createHandler(
       response!.headers.set(name, value)
     })
 
-    // Prevent response middlewares from calling `setHeader()`.
+    // Prevent response callbacks from using `setHeader()`.
     context.setHeader = null!
 
-    for (const middleware of responseChain) {
-      if (cache.has(middleware)) {
-        continue
-      }
-      cache.add(middleware)
-      let result = middleware(context as RequestContext, response)
+    for (const plugin of responseChain) {
+      let result = plugin(response)
       if (result instanceof Promise) {
         result = await result
       }
-      if (result && result instanceof Response) {
+      if (result) {
         response = result
         continue // …instead of break.
       }
@@ -190,7 +180,6 @@ function createHandler(
 
   Object.setPrototypeOf(handler, MiddlewareChain.prototype)
   handler[kRequestChain] = requestChain
-  handler[kResponseChain] = responseChain
   return handler as any
 }
 
@@ -233,5 +222,5 @@ export type {
   RequestHandler,
   RequestMiddleware,
   RequestPlugin,
-  ResponseMiddleware,
+  ResponseCallback,
 } from './types.ts'

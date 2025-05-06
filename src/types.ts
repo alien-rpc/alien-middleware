@@ -4,12 +4,16 @@ import type { MiddlewareChain } from './index.ts'
 import { Awaitable, CastNever, Eval, OneOrMany } from './types/common.ts'
 import { Merge } from './types/merge.ts'
 
-type RequestEnvPlugin = {
+type ReservedProperties = {
   /**
    * Add type-safe environment variables. These are accessed with the `env()`
    * method on the request context.
    */
   env?: object
+  /**
+   * Intercept the response before it's sent to the client.
+   */
+  onResponse?: ResponseCallback
 }
 
 /**
@@ -20,7 +24,7 @@ type RequestEnvPlugin = {
  * May contain special properties:
  * - `env`: Add type-safe environment variables.
  */
-export type RequestPlugin = Record<string, unknown> & RequestEnvPlugin
+export type RequestPlugin = Record<string, unknown> & ReservedProperties
 
 export type MiddlewareTypes = {
   /** Values expected by the start of the chain. */
@@ -75,6 +79,11 @@ interface HattipContext<TPlatform, TEnv extends object>
    * Response middlewares should use `response.headers.set()` instead.
    */
   setHeader(name: string, value: string): void
+
+  /**
+   * Add a callback to be called when a response is generated.
+   */
+  onResponse(callback: ResponseCallback): void
 }
 
 /**
@@ -109,8 +118,7 @@ export type RequestMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
   context: RequestContext<InputProperties<T>, InputEnv<T>, Platform<T>>
 ) => Awaitable<Response | RequestPlugin | void>
 
-export type ResponseMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
-  context: RequestContext<InputProperties<T>, InputEnv<T>, Platform<T>>,
+export type ResponseCallback = (
   response: Response
 ) => Awaitable<Response | void>
 
@@ -131,8 +139,7 @@ export type Middleware<
   TPlatform = any,
 > = {
   (
-    context: RequestContext<TEnv, TProperties, TPlatform>,
-    response: Response
+    context: RequestContext<TEnv, TProperties, TPlatform>
   ): Awaitable<Response | RequestPlugin | void>
 
   /** This property won't exist at runtime. It contains type information for inference purposes. */
@@ -161,7 +168,7 @@ type ApplyMiddlewareResult<TParent extends MiddlewareChain, TResult> = Eval<{
   properties: Merge<
     Properties<TParent>,
     TResult extends RequestPlugin
-      ? Omit<TResult, keyof RequestEnvPlugin>
+      ? Omit<TResult, keyof ReservedProperties>
       : undefined
   >
 }>
