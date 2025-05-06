@@ -52,6 +52,13 @@ interface HattipContext<TPlatform, TEnv extends object>
   env<K extends keyof TEnv>(key: Extract<K, string>): TEnv[K]
   // Prevent unsafe access.
   env(key: never): string | undefined
+
+  /**
+   * Set a response header from a request middleware.
+   *
+   * Response middlewares should use `response.headers.set()` instead.
+   */
+  setHeader(name: string, value: string): void
 }
 
 /**

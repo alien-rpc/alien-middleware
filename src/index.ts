@@ -17,11 +17,14 @@ const kRequestChain = Symbol('requestChain')
 const kResponseChain = Symbol('responseChain')
 const kIgnoreNotFound = Symbol('ignoreNotFound')
 const kMiddlewareCache = Symbol('middlewareCache')
+const kResponseHeaders = Symbol('responseHeaders')
 
 type InternalContext = AdapterRequestContext<any> & {
-  [kMiddlewareCache]?: Set<RequestMiddleware | ResponseMiddleware>
   [kIgnoreNotFound]?: boolean
+  [kMiddlewareCache]?: Set<RequestMiddleware | ResponseMiddleware>
+  [kResponseHeaders]?: Headers | undefined
   url?: URL
+  setHeader?: (name: string, value: string) => void
 }
 
 export class MiddlewareChain<
@@ -104,6 +107,15 @@ function createHandler(
       shouldPassThrough = true
     }
 
+    context.setHeader = (name, value) => {
+      // Avoid leaking headers into the parent context. This condition also
+      // passes if no headers have been set yet.
+      if (context[kResponseHeaders] === parentContext[kResponseHeaders]) {
+        context[kResponseHeaders] = new Headers(parentContext[kResponseHeaders])
+      }
+      context[kResponseHeaders]!.set(name, value)
+    }
+
     // Avoid calling the same middleware twice.
     const cache = (context[kMiddlewareCache] ||= new Set())
 
@@ -160,6 +172,13 @@ function createHandler(
     else if (response.type !== 'default') {
       response = new Response(response.body, response)
     }
+
+    context[kResponseHeaders]?.forEach((value, name) => {
+      response!.headers.set(name, value)
+    })
+
+    // Prevent response middlewares from calling `setHeader()`.
+    context.setHeader = null!
 
     for (const middleware of responseChain) {
       if (cache.has(middleware)) {
