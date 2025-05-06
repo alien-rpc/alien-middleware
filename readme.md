@@ -186,6 +186,11 @@ request middlewares, **except** when the middleware chain is nested inside
 another chain, since the outer chain will still have a chance to return a
 `Response`.
 
+> [!DANGER]
+> If a request middleware returns a `Response`, it's possible that not all of
+> the request plugins will have been applied. Unfortunately, this means a
+> response middleware cannot trust the context to have certain properties.
+
 ### Merging a Middleware Chain
 
 By passing a middleware chain to `.use()`, you can merge it with the existing chain. Its middlewares will be executed _after_ any existing middlewares in this chain and _before_ any new middlewares you add later.
