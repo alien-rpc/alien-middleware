@@ -30,7 +30,7 @@ type InternalContext = AdapterRequestContext<any> & {
 
 export class MiddlewareChain<T extends MiddlewareTypes = any> {
   /** This property won't exist at runtime. It contains type information for inference purposes. */
-  declare $: T
+  declare $MiddlewareChain: T
 
   /** The number of parameters when called as a function. */
   declare readonly length: 1

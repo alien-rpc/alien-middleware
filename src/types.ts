@@ -45,15 +45,15 @@ type AnyMiddlewareTypes = {
 
 type AnyMiddlewareChain = MiddlewareChain<AnyMiddlewareTypes>
 
-type Inputs<T extends AnyMiddlewareChain> = T['$']['initial']
+type Inputs<T extends AnyMiddlewareChain> = T['$MiddlewareChain']['initial']
 type InputProperties<T extends AnyMiddlewareChain> = Inputs<T>['properties']
 type InputEnv<T extends AnyMiddlewareChain> = Inputs<T>['env']
 
-type Current<T extends AnyMiddlewareChain> = T['$']['current']
+type Current<T extends AnyMiddlewareChain> = T['$MiddlewareChain']['current']
 type Properties<T extends AnyMiddlewareChain> = Current<T>['properties']
 type Env<T extends AnyMiddlewareChain> = Current<T>['env']
 
-type Platform<T extends AnyMiddlewareChain> = T['$']['platform']
+type Platform<T extends AnyMiddlewareChain> = T['$MiddlewareChain']['platform']
 
 // This interface exists to reduce visual noise when hovering on a
 // RequestContext variable in your IDE.
@@ -136,7 +136,9 @@ export type Middleware<
   ): Awaitable<Response | RequestPlugin | void>
 
   /** This property won't exist at runtime. It contains type information for inference purposes. */
-  $?: MiddlewareTypes & { initial: { env: TEnv; properties: TProperties } }
+  $Middleware?: MiddlewareTypes & {
+    initial: { env: TEnv; properties: TProperties }
+  }
 }
 
 /**
@@ -232,7 +234,7 @@ export type RouteContext<
   TMethod extends RouteMethod = RouteMethod,
 > = MiddlewareContext<
   ApplyMiddleware<
-    MiddlewareChain<T['$']>,
+    MiddlewareChain<T['$Router']>,
     () => { params: TPathParams; method: TMethod }
   >
 >
@@ -249,7 +251,7 @@ export declare class RouterTypes<
   T extends MiddlewareChain = any,
 > extends Function {
   /** This property won't exist at runtime. It contains type information for inference purposes. */
-  declare $: T['$']
+  declare $Router: T['$MiddlewareChain']
 }
 
 export interface Router<T extends MiddlewareChain = any>
