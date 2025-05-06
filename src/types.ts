@@ -1,4 +1,5 @@
 import type { AdapterRequestContext, HattipHandler } from '@hattip/core'
+import { InferParams } from 'pathic'
 import { Any } from 'radashi'
 import type { MiddlewareChain } from './index.ts'
 import { Merge } from './types/merge.ts'
@@ -199,17 +200,42 @@ export type RouteMethod =
   | 'PATCH'
   | 'OPTIONS'
   | 'HEAD'
+  | (string & {})
 
-export type RouterContext<
-  T extends MiddlewareChain = any,
+export type RouteContext<
+  T extends RouterTypes = any,
   TPathParams extends object = any,
   TMethod extends RouteMethod = RouteMethod,
-> = MiddlewareContext<T> & { params: TPathParams; method: TMethod }
+> = MiddlewareContext<
+  ApplyMiddleware<T['$'], () => { params: TPathParams; method: TMethod }>
+>
 
 export type RouteHandler<
-  T extends MiddlewareChain = any,
+  T extends RouterTypes = any,
   TPathParams extends object = any,
   TMethod extends RouteMethod = RouteMethod,
 > = (
-  context: RouterContext<T, TPathParams, TMethod>
+  context: RouteContext<T, TPathParams, TMethod>
 ) => Awaitable<Response | void>
+
+export declare class RouterTypes<
+  T extends MiddlewareChain = any,
+> extends Function {
+  /** This property won't exist at runtime. It contains type information for inference purposes. */
+  declare $: T
+}
+
+export interface Router<T extends MiddlewareChain = any>
+  extends RouterTypes<T> {
+  (context: IsolatedContext<T>): Awaitable<void | Response>
+
+  use<TPath extends string>(
+    path: TPath,
+    handler: RouteHandler<RouterTypes<T>, InferParams<TPath>>
+  ): Router
+  use<TPath extends string, TMethod extends RouteMethod = RouteMethod>(
+    method: OneOrMany<TMethod> | '*',
+    path: TPath,
+    handler: RouteHandler<RouterTypes<T>, InferParams<TPath>, TMethod>
+  ): Router
+}

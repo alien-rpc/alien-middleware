@@ -1,40 +1,29 @@
-import { compilePaths, InferParams, PathMatcher } from 'pathic'
+import { compilePaths, PathMatcher } from 'pathic'
 import { isArray, isFunction } from 'radashi'
 import type { MiddlewareChain, MiddlewareContext } from './index'
 import type {
   EmptyMiddlewareChain,
+  RouteContext,
   RouteHandler,
   RouteMethod,
-  RouterContext,
+  Router,
 } from './types'
 import { defineParsedURL } from './url.ts'
 
 type OneOrMany<T> = T | readonly T[]
 
-export type Router<T extends MiddlewareChain = any> = ReturnType<
-  typeof routes<T>
->
+export type RouterContext<TRouter extends Router> =
+  TRouter extends Router<infer T> ? MiddlewareContext<T> : never
 
 export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
   middlewares?: T
-) {
+): Router<T> {
   const paths: string[] = []
   const filters: (((method: RouteMethod) => boolean) | null)[] = []
   const handlers: RouteHandler[] = []
 
   let matcher: PathMatcher | undefined
 
-  type Router = typeof router
-
-  function use<TPath extends string>(
-    path: TPath,
-    handler: RouteHandler<T, InferParams<TPath>>
-  ): Router
-  function use<TPath extends string, TMethod extends RouteMethod = RouteMethod>(
-    method: OneOrMany<TMethod> | '*',
-    path: TPath,
-    handler: RouteHandler<T, InferParams<TPath>, TMethod>
-  ): Router
   function use(
     method: OneOrMany<RouteMethod> | '*' | (string & {}),
     path: string | RouteHandler,
@@ -63,7 +52,7 @@ export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
     // Ensure the `url` property exists (e.g. if this is called directly).
     defineParsedURL(context)
 
-    const { request, url } = context as RouterContext
+    const { request, url } = context as RouteContext
     const method = request.method as RouteMethod
 
     matcher ||= compilePaths(paths)
@@ -75,13 +64,13 @@ export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
 
         return middlewares
           ? middlewares.use(handlers[index] as any)(context)
-          : handlers[index](context as RouterContext)
+          : handlers[index](context as RouteContext)
       }
     })
   }
 
   router.use = use
-  return router
+  return router as Router<T>
 }
 
-export type { RouteHandler, RouterContext } from './types.ts'
+export type { RouteContext, RouteHandler, Router } from './types.ts'
