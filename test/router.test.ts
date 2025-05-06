@@ -37,21 +37,19 @@ describe('router', () => {
     router.use('POST', '/users/:id', postHandler)
 
     // Test GET request
-    const getContext = {
+    await router({
       ...context,
       request: new Request('http://localhost/users/123', { method: 'GET' }),
-    }
-    await router(getContext)
+    })
 
     expect(getHandler).toHaveBeenCalled()
     expect(postHandler).not.toHaveBeenCalled()
 
     // Test POST request
-    const postContext = {
+    await router({
       ...context,
       request: new Request('http://localhost/users/123', { method: 'POST' }),
-    }
-    await router(postContext)
+    })
 
     expect(postHandler).toHaveBeenCalled()
   })
@@ -63,20 +61,18 @@ describe('router', () => {
     router.use(['GET', 'POST'], '/api', handler)
 
     // Test GET request
-    const getContext = {
+    await router({
       ...context,
       request: new Request('http://localhost/api', { method: 'GET' }),
-    }
-    await router(getContext)
+    })
 
     expect(handler).toHaveBeenCalledTimes(1)
 
     // Test POST request
-    const postContext = {
+    await router({
       ...context,
       request: new Request('http://localhost/api', { method: 'POST' }),
-    }
-    await router(postContext)
+    })
 
     expect(handler).toHaveBeenCalledTimes(2)
 
@@ -96,11 +92,10 @@ describe('router', () => {
 
     router.use('*', '/wildcard', handler)
 
-    const testContext = {
+    await router({
       ...context,
       request: new Request('http://localhost/wildcard', { method: 'DELETE' }),
-    }
-    await router(testContext)
+    })
 
     expect(handler).toHaveBeenCalled()
   })
