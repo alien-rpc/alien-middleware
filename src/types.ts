@@ -59,19 +59,26 @@ type Env<T extends AnyMiddlewareChain> = Current<T>['env']
 
 type Platform<T extends AnyMiddlewareChain> = T['$MiddlewareChain']['platform']
 
+/**
+ * The `context.env` method used to access environment variables.
+ */
+export type EnvAccessor<TEnv extends object> = {
+  <K extends keyof TEnv>(key: Extract<K, string>): TEnv[K]
+  // Prevent unsafe access.
+  (key: never): string | undefined
+}
+
 // This interface exists to reduce visual noise when hovering on a
 // RequestContext variable in your IDE.
 interface HattipContext<TPlatform, TEnv extends object>
   extends AdapterRequestContext<TPlatform> {
+  env: EnvAccessor<TEnv>
+
   /**
    * The `request.url` string parsed into a `URL` object. Parsing is performed
    * on-demand and the result is cached.
    */
   url: URL
-
-  env<K extends keyof TEnv>(key: Extract<K, string>): TEnv[K]
-  // Prevent unsafe access.
-  env(key: never): string | undefined
 
   /**
    * Set a response header from a request middleware.

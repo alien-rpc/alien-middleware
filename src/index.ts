@@ -215,6 +215,7 @@ export function chain(middleware?: Middleware) {
 export type {
   ApplyMiddleware,
   ApplyMiddlewares,
+  EnvAccessor,
   ExtractMiddleware,
   Middleware,
   MiddlewareContext,
