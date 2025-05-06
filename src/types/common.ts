@@ -6,6 +6,8 @@ export type Awaitable<T> = T | Promise<T>
 
 export type OneOrMany<T> = T | readonly T[]
 
+export type CastNever<T, U> = [T] extends [never] ? U : T
+
 /**
  * Converts a type `T` to something that can be intersected with an object.
  */

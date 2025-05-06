@@ -1,4 +1,4 @@
-import { Eval } from './common'
+import { CastNever, Eval } from './common'
 
 type Keys<T> = T extends any ? keyof T : never
 
@@ -35,9 +35,9 @@ export type Merge<
   TSource extends object,
   TOverrides extends object | undefined,
 > = Eval<
-  Omit<TSource, Keys<TOverrides>> & {
+  Omit<CastNever<TSource, {}>, Keys<TOverrides>> & {
     [K in Keys<TOverrides>]: TOverrides extends any
-      ? MergeProperty<TSource, TOverrides, K>
+      ? MergeProperty<CastNever<TSource, {}>, TOverrides, K>
       : never
   }
 >

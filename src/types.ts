@@ -1,7 +1,13 @@
 import type { AdapterRequestContext, HattipHandler } from '@hattip/core'
 import { InferParams } from 'pathic'
 import type { MiddlewareChain } from './index.ts'
-import { Awaitable, Eval, Intersectable, OneOrMany } from './types/common.ts'
+import {
+  Awaitable,
+  CastNever,
+  Eval,
+  Intersectable,
+  OneOrMany,
+} from './types/common.ts'
 import { Merge } from './types/merge.ts'
 
 type RequestEnvPlugin = {
@@ -129,10 +135,15 @@ export type Middleware<
   TEnv extends object = any,
   TProperties extends object = any,
   TPlatform = any,
-> = (
-  context: RequestContext<TEnv, TProperties, TPlatform>,
-  response: Response
-) => Awaitable<Response | RequestPlugin | void>
+> = {
+  (
+    context: RequestContext<TEnv, TProperties, TPlatform>,
+    response: Response
+  ): Awaitable<Response | RequestPlugin | void>
+
+  /** This property won't exist at runtime. It contains type information for inference purposes. */
+  $?: MiddlewareTypes & { initial: { env: TEnv; properties: TProperties } }
+}
 
 /**
  * Extract a `Middleware` type from a `MiddlewareChain` type.
@@ -161,39 +172,57 @@ type ApplyMiddlewareResult<TParent extends MiddlewareChain, TResult> = Eval<{
   >
 }>
 
+type ApplyMiddlewareOutputs<
+  TFirst extends MiddlewareChain,
+  TSecond extends Middleware,
+> = TSecond extends MiddlewareChain
+  ? {
+      env: Merge<Env<TFirst>, Env<TSecond>>
+      properties: Merge<Properties<TFirst>, Properties<TSecond>>
+    }
+  : TSecond extends (...args: any[]) => Awaitable<infer TResult>
+    ? ApplyMiddlewareResult<TFirst, TResult>
+    : Current<TFirst>
+
+type MiddlewareInputs<T extends Middleware> =
+  T extends Middleware<infer TEnv, infer TProperties>
+    ? { env: TEnv; properties: TProperties }
+    : never
+
+type MiddlewarePlatform<T extends Middleware> =
+  T extends Middleware<any, any, infer TPlatform> ? TPlatform : never
+
 /**
  * This applies a middleware to a chain. If the type `TMiddleware` is itself a
  * chain, it's treated as a nested chain, which won't leak its plugins into the
  * parent chain.
+ *
+ * The `TFirst` type is allowed to be `never`, which results in the middleware's
+ * output types being used as the request handler's input types.
  */
 export type ApplyMiddleware<
   TFirst extends MiddlewareChain,
-  TSecond extends Middleware<Env<TFirst>, Properties<TFirst>, Platform<TFirst>>,
-> = (
-  TSecond extends MiddlewareChain
-    ? {
-        env: Merge<Env<TFirst>, Env<TSecond>>
-        properties: Merge<Properties<TFirst>, Properties<TSecond>>
-      }
-    : TSecond extends (...args: any[]) => Awaitable<infer TResult>
-      ? ApplyMiddlewareResult<TFirst, TResult>
-      : Current<TFirst>
-) extends infer TOutputs extends MiddlewareTypes['current']
-  ? RequestHandler<{
-      initial: Inputs<TFirst>
-      current: TOutputs
-      platform: Platform<TFirst>
-    }>
-  : never
+  TSecond extends Middleware,
+> =
+  ApplyMiddlewareOutputs<TFirst, TSecond> extends infer TCurrent extends
+    MiddlewareTypes['current']
+    ? RequestHandler<{
+        initial: CastNever<Inputs<TFirst>, MiddlewareInputs<TSecond>>
+        current: TCurrent
+        platform: CastNever<Platform<TFirst>, MiddlewarePlatform<TSecond>>
+      }>
+    : never
 
-export type EmptyMiddlewareChain = MiddlewareChain<{
+export type EmptyMiddlewareChain<TPlatform = unknown> = MiddlewareChain<{
   initial: { env: {}; properties: {} }
   current: { env: {}; properties: {} }
-  platform: unknown
+  platform: TPlatform
 }>
 
 export type ApplyFirstMiddleware<T extends Middleware> =
-  T extends MiddlewareChain ? T : ApplyMiddleware<EmptyMiddlewareChain, T>
+  T extends MiddlewareChain
+    ? T
+    : ApplyMiddleware<EmptyMiddlewareChain<MiddlewarePlatform<T>>, T>
 
 export type RouteMethod =
   | 'GET'
