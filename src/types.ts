@@ -1,6 +1,7 @@
 import type { AdapterRequestContext, HattipHandler } from '@hattip/core'
 import { Any } from 'radashi'
 import type { MiddlewareChain } from './index.ts'
+import { Merge } from './types/merge.ts'
 
 type RequestEnvPlugin = {
   /**
@@ -132,25 +133,25 @@ export type ExtractMiddleware<T extends MiddlewareChain> = Middleware<
   Platform<T>
 >
 
-type Merge<
-  TSource extends object,
-  TOverrides extends object | undefined,
-> = {} & (TOverrides extends object
-  ? {
-      [K in keyof TSource | keyof TOverrides]: K extends keyof TOverrides
-        ? TOverrides[K]
-        : K extends keyof TSource
-          ? TSource[K]
-          : never
-    }
-  : TSource)
-
-type ApplyRequestPlugin<
+/**
+ * Merge a request plugin into a middleware chain.
+ */
+type ApplyMiddlewareResult<
   TParent extends MiddlewareChain,
-  TPlugin extends RequestPlugin,
+  TResult,
 > = {} & MiddlewareTypes<
-  Merge<Env<TParent>, TPlugin['env']>,
-  Merge<Properties<TParent>, Omit<TPlugin, keyof RequestEnvPlugin>>
+  Merge<
+    Env<TParent>,
+    TResult extends { env: infer TEnv extends object | undefined }
+      ? TEnv
+      : undefined
+  >,
+  Merge<
+    Properties<TParent>,
+    TResult extends RequestPlugin
+      ? Omit<TResult, keyof RequestEnvPlugin>
+      : undefined
+  >
 >
 
 /**
@@ -169,9 +170,7 @@ export type ApplyMiddleware<
         Merge<Properties<TFirst>, Properties<TSecond>>
       >
     : TSecond extends (...args: any[]) => Awaitable<infer TResult>
-      ? TResult extends RequestPlugin
-        ? ApplyRequestPlugin<TFirst, TResult>
-        : Current<TFirst>
+      ? ApplyMiddlewareResult<TFirst, TResult>
       : Current<TFirst>,
   Platform<TFirst>
 >
