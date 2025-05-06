@@ -189,7 +189,7 @@ type ApplyMiddlewareOutputs<
       properties: Merge<Properties<TFirst>, Properties<TSecond>>
     }
   : TSecond extends (...args: any[]) => Awaitable<infer TResult>
-    ? ApplyMiddlewareResult<TFirst, TResult>
+    ? ApplyMiddlewareResult<TFirst, Exclude<TResult, Response>>
     : Current<TFirst>
 
 type MiddlewareInputs<T extends Middleware> =
