@@ -210,11 +210,11 @@ export function chain<
   platform: TPlatform
 }>
 
-export function chain<const T extends Middleware = Middleware>(
+export function chain<const T extends Middleware = Middleware<{}, {}, unknown>>(
   middleware: T
 ): ApplyFirstMiddleware<T>
 
-export function chain<const T extends Middleware = Middleware>(middleware?: T) {
+export function chain(middleware?: Middleware) {
   if (middleware instanceof MiddlewareChain) {
     return middleware
   }
