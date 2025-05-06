@@ -82,6 +82,20 @@ describe('request middleware', () => {
     await app.use(ware)(context)
     expect(ware).toHaveBeenCalled()
   })
+
+  test('set a response header', async () => {
+    const response = await app
+      .use(ctx => {
+        ctx.setHeader('x-foo', 'true')
+        ctx.setHeader('x-bar', 'true')
+      })
+      .use(ctx => {
+        ctx.setHeader('x-bar', 'false')
+      })(context)
+
+    expect(response.headers.get('x-foo')).toBe('true')
+    expect(response.headers.get('x-bar')).toBe('false')
+  })
 })
 
 describe('response middleware', () => {
