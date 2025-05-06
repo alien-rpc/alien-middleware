@@ -105,7 +105,9 @@ function createHandler(
     }
 
     // Avoid calling the same middleware twice.
-    const cache = (context[kMiddlewareCache] ||= new Set())
+    const cache = (context[kMiddlewareCache] = new Set(
+      parentContext[kMiddlewareCache]
+    ))
 
     let response: Response | undefined
     let env: Record<string, string> | undefined
