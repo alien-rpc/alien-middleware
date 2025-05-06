@@ -1,7 +1,7 @@
 import type { AdapterRequestContext, HattipHandler } from '@hattip/core'
 import { InferParams } from 'pathic'
-import { Any } from 'radashi'
 import type { MiddlewareChain } from './index.ts'
+import { Awaitable, Eval, Intersectable, OneOrMany } from './types/common.ts'
 import { Merge } from './types/merge.ts'
 
 type RequestEnvPlugin = {
@@ -63,15 +63,6 @@ interface HattipContext<TPlatform, TEnv extends object>
 }
 
 /**
- * Converts a type `T` to something that can be intersected with an object.
- */
-type Intersectable<T extends object> = [T] extends [never]
-  ? {}
-  : [T] extends [Any]
-    ? Record<PropertyKey, any>
-    : T
-
-/**
  * An extensible Hattip context object.
  *
  * NOTE: When using this type on the right side of an `extends` clause, you
@@ -98,8 +89,6 @@ export type IsolatedContext<T extends MiddlewareChain> = RequestContext<
   InputEnv<T>,
   Platform<T>
 >
-
-type Awaitable<T> = T | Promise<T>
 
 export type RequestMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
   context: RequestContext<InputProperties<T>, InputEnv<T>, Platform<T>>

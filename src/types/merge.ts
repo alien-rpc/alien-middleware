@@ -1,4 +1,4 @@
-type Eval<T> = {} & { [K in keyof T]: T[K] }
+import { Eval } from './common'
 
 type Keys<T> = T extends any ? keyof T : never
 
@@ -34,7 +34,7 @@ type MergeProperty<TSource, TOverrides, K> =
 export type Merge<
   TSource extends object,
   TOverrides extends object | undefined,
-> = {} & Eval<
+> = Eval<
   Omit<TSource, Keys<TOverrides>> & {
     [K in Keys<TOverrides>]: TOverrides extends any
       ? MergeProperty<TSource, TOverrides, K>

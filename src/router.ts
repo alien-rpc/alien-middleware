@@ -8,9 +8,8 @@ import type {
   RouteMethod,
   Router,
 } from './types'
+import { OneOrMany } from './types/common.ts'
 import { defineParsedURL } from './url.ts'
-
-type OneOrMany<T> = T | readonly T[]
 
 export type RouterContext<TRouter extends Router> =
   TRouter extends Router<infer T> ? MiddlewareContext<T> : never
