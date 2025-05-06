@@ -11,6 +11,7 @@ import {
   RequestMiddleware,
   ResponseMiddleware,
 } from './types'
+import { Awaitable } from './types/common.ts'
 import { defineParsedURL } from './url.ts'
 
 const kRequestChain = Symbol('requestChain')
@@ -73,10 +74,8 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
    * Create a middleware function that encapsulates this middleware chain, so
    * any modifications it makes to the request context are not leaked.
    */
-  isolate() {
-    return isFunction(this)
-      ? (ctx: IsolatedContext<this>): Promise<Response | void> => this(ctx)
-      : noop
+  isolate(): (ctx: IsolatedContext<this>) => Awaitable<Response | void> {
+    return isFunction(this) ? ctx => this(ctx) : noop
   }
 }
 

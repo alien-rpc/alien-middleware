@@ -1,13 +1,7 @@
 import type { AdapterRequestContext, HattipHandler } from '@hattip/core'
 import { InferParams } from 'pathic'
 import type { MiddlewareChain } from './index.ts'
-import {
-  Awaitable,
-  CastNever,
-  Eval,
-  Intersectable,
-  OneOrMany,
-} from './types/common.ts'
+import { Awaitable, CastNever, Eval, OneOrMany } from './types/common.ts'
 import { Merge } from './types/merge.ts'
 
 type RequestEnvPlugin = {
@@ -94,7 +88,7 @@ export type RequestContext<
   TEnv extends object = any,
   TProperties extends object = never,
   TPlatform = any,
-> = HattipContext<TPlatform, TEnv> & Intersectable<TProperties>
+> = HattipContext<TPlatform, TEnv> & CastNever<TProperties, unknown>
 
 /**
  * Extract a `RequestContext` type from a `MiddlewareChain` type.
@@ -148,11 +142,9 @@ export type Middleware<
 /**
  * Extract a `Middleware` type from a `MiddlewareChain` type.
  */
-export type ExtractMiddleware<T extends MiddlewareChain> = Middleware<
-  Env<T>,
-  Properties<T>,
-  Platform<T>
->
+export type ExtractMiddleware<T extends MiddlewareChain> = [T] extends [never]
+  ? Middleware<{}, {}, any>
+  : Middleware<Env<T>, Properties<T>, Platform<T>>
 
 /**
  * Merge a request plugin into a middleware chain.
