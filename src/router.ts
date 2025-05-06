@@ -3,6 +3,7 @@ import { isArray, isFunction } from 'radashi'
 import { chain, type MiddlewareChain, type MiddlewareContext } from './index'
 import type {
   EmptyMiddlewareChain,
+  RequestContext,
   RouteContext,
   RouteHandler,
   RouteMethod,
@@ -16,14 +17,16 @@ export type RouterContext<TRouter extends Router> =
 
 export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
   middlewares?: T
-): Router<T> {
+): Router<T>
+
+export function routes(middlewares?: MiddlewareChain): Router {
   const paths: string[] = []
   const filters: (((method: RouteMethod) => boolean) | null)[] = []
   const handlers: RouteHandler[] = []
 
   let matcher: PathMatcher | undefined
 
-  type InternalContext = MiddlewareContext<T> & {
+  type InternalContext = RequestContext & {
     method?: RouteMethod
     params?: Record<string, string>
   }
@@ -76,7 +79,7 @@ export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
     return router
   }
 
-  return router as any
+  return router as Router
 }
 
 export type { RouteContext, RouteHandler, Router } from './types.ts'
