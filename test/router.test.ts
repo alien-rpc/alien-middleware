@@ -2,7 +2,7 @@ import { AdapterRequestContext } from '@hattip/core'
 import { noop } from 'radashi'
 import { chain } from '../src/index.ts'
 import { routes } from '../src/router.ts'
-import { RouterContext } from '../src/types.ts'
+import { RouteContext } from '../src/types.ts'
 
 const context: AdapterRequestContext = {
   env: () => undefined,
@@ -20,7 +20,7 @@ describe('router', () => {
 
     router.use('/users/:id', handler)
 
-    const response = await router(context as RouterContext)
+    const response = await router(context)
 
     expect(response).toBeInstanceOf(Response)
     expect(handler).toHaveBeenCalledExactlyOnceWith(
@@ -41,7 +41,7 @@ describe('router', () => {
       ...context,
       request: new Request('http://localhost/users/123', { method: 'GET' }),
     }
-    await router(getContext as RouterContext)
+    await router(getContext)
 
     expect(getHandler).toHaveBeenCalled()
     expect(postHandler).not.toHaveBeenCalled()
@@ -51,7 +51,7 @@ describe('router', () => {
       ...context,
       request: new Request('http://localhost/users/123', { method: 'POST' }),
     }
-    await router(postContext as RouterContext)
+    await router(postContext)
 
     expect(postHandler).toHaveBeenCalled()
   })
@@ -67,7 +67,7 @@ describe('router', () => {
       ...context,
       request: new Request('http://localhost/api', { method: 'GET' }),
     }
-    await router(getContext as RouterContext)
+    await router(getContext)
 
     expect(handler).toHaveBeenCalledTimes(1)
 
@@ -76,7 +76,7 @@ describe('router', () => {
       ...context,
       request: new Request('http://localhost/api', { method: 'POST' }),
     }
-    await router(postContext as RouterContext)
+    await router(postContext)
 
     expect(handler).toHaveBeenCalledTimes(2)
 
@@ -85,7 +85,7 @@ describe('router', () => {
       ...context,
       request: new Request('http://localhost/api', { method: 'DELETE' }),
     }
-    await router(deleteContext as RouterContext)
+    await router(deleteContext)
 
     expect(handler).not.toHaveBeenCalledTimes(3)
   })
@@ -100,7 +100,7 @@ describe('router', () => {
       ...context,
       request: new Request('http://localhost/wildcard', { method: 'DELETE' }),
     }
-    await router(testContext as RouterContext)
+    await router(testContext)
 
     expect(handler).toHaveBeenCalled()
   })
@@ -108,14 +108,14 @@ describe('router', () => {
   test('with middleware chain', async () => {
     const app = chain().use(() => ({ env: { API_KEY: '123' } }))
     const router = routes(app)
-    const handler = vi.fn((ctx: RouterContext) => {
+    const handler = vi.fn((ctx: RouteContext) => {
       expect(ctx.env('API_KEY')).toBe('123')
       return new Response('OK')
     })
 
     router.use('/users/:id', handler)
 
-    const response = await router(context as RouterContext)
+    const response = await router(context)
 
     expect(response).toBeInstanceOf(Response)
     expect(handler).toHaveBeenCalled()

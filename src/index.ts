@@ -27,20 +27,9 @@ type InternalContext = AdapterRequestContext<any> & {
   setHeader?: (name: string, value: string) => void
 }
 
-export class MiddlewareChain<
-  /** Values expected by the start of the chain. */
-  TInputs extends MiddlewareTypes = any,
-  /** Values provided by the end of the chain. */
-  TCurrent extends MiddlewareTypes = any,
-  /** Values from the host platform. */
-  TPlatform = any,
-> {
+export class MiddlewareChain<T extends MiddlewareTypes = any> {
   /** This property won't exist at runtime. It contains type information for inference purposes. */
-  declare $: {
-    input: TInputs
-    current: TCurrent
-    platform: TPlatform
-  }
+  declare $: T
 
   /** The number of parameters when called as a function. */
   declare readonly length: 1
@@ -215,11 +204,11 @@ export function chain<
   TEnv extends object = {},
   TProperties extends object = {},
   TPlatform = unknown,
->(): MiddlewareChain<
-  MiddlewareTypes<TEnv, TProperties>,
-  MiddlewareTypes<TEnv, TProperties>,
-  TPlatform
->
+>(): MiddlewareChain<{
+  initial: { env: TEnv; properties: TProperties }
+  current: { env: TEnv; properties: TProperties }
+  platform: TPlatform
+}>
 
 export function chain<const T extends Middleware = Middleware>(
   middleware: T

@@ -22,23 +22,38 @@ type RequestEnvPlugin = {
  */
 export type RequestPlugin = Record<string, unknown> & RequestEnvPlugin
 
-type Inputs<T extends MiddlewareChain> = T['$']['input']
-type Platform<T extends MiddlewareChain> = T['$']['platform']
-
-type InputProperties<T extends MiddlewareChain> = Inputs<T>['properties']
-type InputEnv<T extends MiddlewareChain> = Inputs<T>['env']
-
-type Current<T extends MiddlewareChain> = T['$']['current']
-type Properties<T extends MiddlewareChain> = Current<T>['properties']
-type Env<T extends MiddlewareChain> = Current<T>['env']
-
-export type MiddlewareTypes<
-  TEnv extends object = any,
-  TProperties extends object = any,
-> = {
-  env: TEnv
-  properties: TProperties
+export type MiddlewareTypes = {
+  /** Values expected by the start of the chain. */
+  initial: {
+    env: object
+    properties: object
+  }
+  /** Values provided by the end of the chain. */
+  current: {
+    env: object
+    properties: object
+  }
+  /** Values from the host platform. */
+  platform: unknown
 }
+
+type AnyMiddlewareTypes = {
+  initial: { env: any; properties: any }
+  current: { env: any; properties: any }
+  platform: any
+}
+
+type AnyMiddlewareChain = MiddlewareChain<AnyMiddlewareTypes>
+
+type Inputs<T extends AnyMiddlewareChain> = T['$']['initial']
+type InputProperties<T extends AnyMiddlewareChain> = Inputs<T>['properties']
+type InputEnv<T extends AnyMiddlewareChain> = Inputs<T>['env']
+
+type Current<T extends AnyMiddlewareChain> = T['$']['current']
+type Properties<T extends AnyMiddlewareChain> = Current<T>['properties']
+type Env<T extends AnyMiddlewareChain> = Current<T>['env']
+
+type Platform<T extends AnyMiddlewareChain> = T['$']['platform']
 
 // This interface exists to reduce visual noise when hovering on a
 // RequestContext variable in your IDE.
@@ -99,11 +114,9 @@ export type ResponseMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
   response: Response
 ) => Awaitable<Response | void>
 
-export type RequestHandler<
-  TInputs extends MiddlewareTypes = any,
-  TCurrent extends MiddlewareTypes = any,
-  TPlatform = any,
-> = HattipHandler<TPlatform> & MiddlewareChain<TInputs, TCurrent, TPlatform>
+export interface RequestHandler<T extends MiddlewareTypes = any>
+  extends HattipHandler<T['platform']>,
+    MiddlewareChain<T> {}
 
 /**
  * Either a request middleware or a response middleware.
@@ -133,23 +146,20 @@ export type ExtractMiddleware<T extends MiddlewareChain> = Middleware<
 /**
  * Merge a request plugin into a middleware chain.
  */
-type ApplyMiddlewareResult<
-  TParent extends MiddlewareChain,
-  TResult,
-> = {} & MiddlewareTypes<
-  Merge<
+type ApplyMiddlewareResult<TParent extends MiddlewareChain, TResult> = Eval<{
+  env: Merge<
     Env<TParent>,
     TResult extends { env: infer TEnv extends object | undefined }
       ? TEnv
       : undefined
-  >,
-  Merge<
+  >
+  properties: Merge<
     Properties<TParent>,
     TResult extends RequestPlugin
       ? Omit<TResult, keyof RequestEnvPlugin>
       : undefined
   >
->
+}>
 
 /**
  * This applies a middleware to a chain. If the type `TMiddleware` is itself a
@@ -159,24 +169,28 @@ type ApplyMiddlewareResult<
 export type ApplyMiddleware<
   TFirst extends MiddlewareChain,
   TSecond extends Middleware<Env<TFirst>, Properties<TFirst>, Platform<TFirst>>,
-> = RequestHandler<
-  Inputs<TFirst>,
+> = (
   TSecond extends MiddlewareChain
-    ? MiddlewareTypes<
-        Merge<Env<TFirst>, Env<TSecond>>,
-        Merge<Properties<TFirst>, Properties<TSecond>>
-      >
+    ? {
+        env: Merge<Env<TFirst>, Env<TSecond>>
+        properties: Merge<Properties<TFirst>, Properties<TSecond>>
+      }
     : TSecond extends (...args: any[]) => Awaitable<infer TResult>
       ? ApplyMiddlewareResult<TFirst, TResult>
-      : Current<TFirst>,
-  Platform<TFirst>
->
+      : Current<TFirst>
+) extends infer TOutputs extends MiddlewareTypes['current']
+  ? RequestHandler<{
+      initial: Inputs<TFirst>
+      current: TOutputs
+      platform: Platform<TFirst>
+    }>
+  : never
 
-export type EmptyMiddlewareChain = MiddlewareChain<
-  MiddlewareTypes<{}, {}>,
-  MiddlewareTypes<{}, {}>,
-  unknown
->
+export type EmptyMiddlewareChain = MiddlewareChain<{
+  initial: { env: {}; properties: {} }
+  current: { env: {}; properties: {} }
+  platform: unknown
+}>
 
 export type ApplyFirstMiddleware<T extends Middleware> =
   T extends MiddlewareChain ? T : ApplyMiddleware<EmptyMiddlewareChain, T>
@@ -196,7 +210,10 @@ export type RouteContext<
   TPathParams extends object = any,
   TMethod extends RouteMethod = RouteMethod,
 > = MiddlewareContext<
-  ApplyMiddleware<T['$'], () => { params: TPathParams; method: TMethod }>
+  ApplyMiddleware<
+    MiddlewareChain<T['$']>,
+    () => { params: TPathParams; method: TMethod }
+  >
 >
 
 export type RouteHandler<
@@ -211,20 +228,20 @@ export declare class RouterTypes<
   T extends MiddlewareChain = any,
 > extends Function {
   /** This property won't exist at runtime. It contains type information for inference purposes. */
-  declare $: T
+  declare $: T['$']
 }
 
 export interface Router<T extends MiddlewareChain = any>
   extends RouterTypes<T> {
-  (context: IsolatedContext<T>): Awaitable<void | Response>
+  (context: AdapterRequestContext<Platform<T>>): Awaitable<void | Response>
 
   use<TPath extends string>(
     path: TPath,
-    handler: RouteHandler<RouterTypes<T>, InferParams<TPath>>
+    handler: RouteHandler<this, InferParams<TPath>>
   ): Router
   use<TPath extends string, TMethod extends RouteMethod = RouteMethod>(
     method: OneOrMany<TMethod> | '*',
     path: TPath,
-    handler: RouteHandler<RouterTypes<T>, InferParams<TPath>, TMethod>
+    handler: RouteHandler<this, InferParams<TPath>, TMethod>
   ): Router
 }
