@@ -1,6 +1,6 @@
 import { compilePaths, PathMatcher } from 'pathic'
 import { isArray, isFunction } from 'radashi'
-import type { MiddlewareChain, MiddlewareContext } from './index'
+import { chain, type MiddlewareChain, type MiddlewareContext } from './index'
 import type {
   EmptyMiddlewareChain,
   RouteContext,
@@ -23,11 +23,40 @@ export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
 
   let matcher: PathMatcher | undefined
 
-  function use(
+  type InternalContext = MiddlewareContext<T> & {
+    method?: RouteMethod
+    params?: Record<string, string>
+  }
+
+  function handle(context: InternalContext) {
+    const method = context.request.method as RouteMethod
+
+    // Ensure the `url` property exists (e.g. if this is called directly).
+    defineParsedURL(context)
+
+    matcher ||= compilePaths(paths)
+
+    return matcher(context.url.pathname, (index, params) => {
+      if (!filters[index] || filters[index](method)) {
+        context.method = method
+        context.params = params
+
+        return handlers[index](context as RouteContext)
+      }
+    })
+  }
+
+  const run = middlewares?.use(handle) ?? chain(handle)
+
+  function router(context: InternalContext) {
+    return run(context)
+  }
+
+  router.use = (
     method: OneOrMany<RouteMethod> | '*' | (string & {}),
     path: string | RouteHandler,
     handler?: RouteHandler
-  ) {
+  ) => {
     if (isFunction(path)) {
       paths.push(method as string)
       filters.push(null)
@@ -47,29 +76,7 @@ export function routes<T extends MiddlewareChain = EmptyMiddlewareChain>(
     return router
   }
 
-  function router(context: MiddlewareContext<T>) {
-    // Ensure the `url` property exists (e.g. if this is called directly).
-    defineParsedURL(context)
-
-    const { request, url } = context as RouteContext
-    const method = request.method as RouteMethod
-
-    matcher ||= compilePaths(paths)
-
-    return matcher(url.pathname, (index, params) => {
-      if (!filters[index] || filters[index](method)) {
-        context.method = method
-        context.params = params
-
-        return middlewares
-          ? middlewares.use(handlers[index] as any)(context)
-          : handlers[index](context as RouteContext)
-      }
-    })
-  }
-
-  router.use = use
-  return router as Router<T>
+  return router as any
 }
 
 export type { RouteContext, RouteHandler, Router } from './types.ts'
