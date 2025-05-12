@@ -212,6 +212,8 @@ export function chain(middleware?: Middleware) {
   return middleware ? empty.use(middleware) : empty
 }
 
+export { filterPlatform } from './middleware/filterPlatform.ts'
+
 export type {
   ApplyMiddleware,
   ApplyMiddlewares,
