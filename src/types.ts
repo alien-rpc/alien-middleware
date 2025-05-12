@@ -73,6 +73,7 @@ export type EnvAccessor<TEnv extends object> = {
 interface HattipContext<TPlatform, TEnv extends object>
   extends AdapterRequestContext<TPlatform> {
   env: EnvAccessor<TEnv>
+  passThrough(): never
 
   /**
    * The `request.url` string parsed into a `URL` object. Parsing is performed
