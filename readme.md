@@ -199,6 +199,10 @@ console.log(response.headers.get('X-Powered-By')) // Output: alien-middleware
 > uncalled middleware will not be executed. Therefore, order your middlewares
 > carefully.
 
+#### Modifying Response Headers
+
+Even if a middleware returns an immutable `Response` (e.g. from a `fetch()` call), your _response callback_ can still modify the headers. We make sure to clone the response before processing it with any response callbacks.
+
 ### Merging a Middleware Chain
 
 By passing a middleware chain to `.use()`, you can merge it with the existing chain. Its middlewares will be executed _after_ any existing middlewares in this chain and _before_ any new middlewares you add later.
