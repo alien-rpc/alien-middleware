@@ -154,6 +154,14 @@ Request middleware runs sequentially before a `Response` is generated.
   const app = chain().use(addApiKey).use(useApiKey)
   ```
 
+- **Setting Response Headers:** Call the `context.setHeader()` method to set a response header.
+
+  ```typescript
+  const app = chain().use(context => {
+    context.setHeader('X-Powered-By', 'alien-middleware')
+  })
+  ```
+
 > [!NOTE]
 > If you're wondering why you need to return an object to define properties
 > (rather than simply assigning to the context object), it's because TypeScript
