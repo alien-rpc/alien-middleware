@@ -42,7 +42,7 @@ const appWithInitial = chain(context => {
 
 ### Adding Middleware with `.use()`
 
-Use the `.use()` method to add middleware functions to the chain. Each call to `.use()` returns a _new_, immutable chain instance.
+Use the `.use()` method to add middleware functions to the chain.
 
 ```typescript
 import type { RequestContext } from 'alien-middleware'
