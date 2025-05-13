@@ -31,7 +31,6 @@ describe('request middleware', () => {
     const ware = vi.fn((ctx: RequestContext<{}, { foo: boolean }>) => {
       expect(ctx.foo).toBe(true)
     })
-    expect(ware.length).toBe(1)
     await app.use(() => ({ foo: true })).use(ware)(context)
     expect(ware).toHaveBeenCalled()
   })
@@ -98,38 +97,54 @@ describe('request middleware', () => {
   })
 })
 
-describe('response middleware', () => {
+describe('response callbacks', () => {
   test('receives the response', async () => {
-    const ware = vi.fn((ctx: RequestContext, response: Response) => {
-      expect(response.status).toBe(418)
-    })
-
-    expect(ware.length).toBe(2)
+    const ware = vi.fn(() => ({
+      onResponse(response: Response) {
+        expect(response.status).toBe(418)
+      },
+    }))
 
     const response = await app
-      .use(() => new Response(null, { status: 418 }))
-      .use(ware)(context)
+      .use(ware)
+      .use(() => new Response(null, { status: 418 }))(context)
 
     expect(response.status).toBe(418)
     expect(ware).toHaveBeenCalled()
   })
 
   test('override response', async () => {
-    const ware = vi.fn(async (ctx: RequestContext, response: Response) => {
-      return new Response(null, { status: 404 })
-    })
+    const ware = vi.fn(() => ({
+      onResponse() {
+        return new Response(null, { status: 404 })
+      },
+    }))
 
     const response = await app
-      .use(() => new Response(null, { status: 418 }))
-      .use(ware)(context)
+      .use(ware)
+      .use(() => new Response(null, { status: 418 }))(context)
 
     expect(response.status).toBe(404)
     expect(ware).toHaveBeenCalled()
   })
 
   test('called even if no response is generated', async () => {
-    const ware = vi.fn((ctx: RequestContext, response: Response) => {
-      expect(response.status).toBe(404)
+    const ware = vi.fn(() => ({
+      onResponse(response: Response) {
+        expect(response.status).toBe(404)
+      },
+    }))
+
+    const response = await app.use(ware)(context)
+    expect(response.status).toBe(404)
+    expect(ware).toHaveBeenCalled()
+  })
+
+  test('register with context.onResponse()', async () => {
+    const ware = vi.fn((ctx: RequestContext) => {
+      ctx.onResponse(response => {
+        expect(response.status).toBe(404)
+      })
     })
 
     const response = await app.use(ware)(context)
@@ -161,30 +176,39 @@ describe('merging middleware chains', () => {
   test('response middlewares are merged', async () => {
     let calls = 0
 
-    const nestedWare = vi.fn((ctx: RequestContext, response: Response) => {
-      expect(calls++).toBe(1)
-      expect(response.status).toBe(418)
+    const nestedWare = vi.fn((ctx: RequestContext) => {
+      ctx.onResponse(response => {
+        expect(calls++).toBe(1)
+        expect(response.status).toBe(418)
+      })
     })
 
-    const nestedApp = chain(() => new Response(null, { status: 418 })).use(
-      nestedWare
-    )
+    const nestedApp = chain()
+      .use(nestedWare)
+      .use(() => new Response(null, { status: 418 }))
 
-    const first = vi.fn((ctx: RequestContext, response: Response) => {
-      expect(calls++).toBe(0)
-      expect(response.status).toBe(418)
+    const first = vi.fn((ctx: RequestContext) => {
+      ctx.onResponse(response => {
+        expect(calls++).toBe(0)
+        expect(response.status).toBe(418)
+      })
     })
 
-    const last = vi.fn((ctx: RequestContext, response: Response) => {
-      expect(calls++).toBe(2)
-      expect(response.status).toBe(418)
+    // This middleware will never run, because the nestedApp will always return
+    // a response before then.
+    const last = vi.fn((ctx: RequestContext) => {
+      ctx.onResponse(() => {
+        expect.fail('Should not be called')
+      })
     })
 
     const app = chain().use(first).use(nestedApp).use(last)
 
     const response = await app.use(first)(context)
     expect(response.status).toBe(418)
-    expect(calls).toBe(3)
+    expect(nestedWare).toHaveBeenCalled()
+    expect(first).toHaveBeenCalled()
+    expect(last).not.toHaveBeenCalled()
   })
 })
 
@@ -227,9 +251,13 @@ test('response is cloned if its type is not "default"', async () => {
       })
   )
 
-  const response = await app.use(fetcher).use((ctx, response) => {
-    response.headers.set('x-test', 'test')
-  })(context)
+  const response = await app
+    .use(ctx => {
+      ctx.onResponse(response => {
+        response.headers.set('x-test', 'test')
+      })
+    })
+    .use(fetcher)(context)
 
   expect(fetcher).toHaveBeenCalled()
   expect(response.status).toBe(200)
