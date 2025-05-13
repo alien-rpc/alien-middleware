@@ -211,6 +211,25 @@ console.log(response.headers.get('X-Powered-By')) // Output: alien-middleware
 
 Even if a middleware returns an immutable `Response` (e.g. from a `fetch()` call), your _response callback_ can still modify the headers. We make sure to clone the response before processing it with any response callbacks.
 
+#### Non-Blocking Response Callbacks
+
+To ensure the client receives a response as soon as possible, your response callbacks should avoid using `await` unless absolutely necessary. Prefer using `context.waitUntil()` to register independent promises that shouldn't block the response from being sent.
+
+```typescript
+const app = chain().use(context => {
+  context.onResponse(async response => {
+    // ❌ Bad! This blocks the response from being sent.
+    await myLoggingService.logResponse(response)
+
+    // ❌ Bad! This may be interrupted by serverless runtimes.
+    myLoggingService.logResponse(response).catch(console.error)
+
+    // ✅ Good! This doesn't block the response from being sent.
+    context.waitUntil(myLoggingService.logResponse(response))
+  })
+})
+```
+
 ### Merging a Middleware Chain
 
 By passing a middleware chain to `.use()`, you can merge it with the existing chain. Its middlewares will be executed _after_ any existing middlewares in this chain and _before_ any new middlewares you add later.
