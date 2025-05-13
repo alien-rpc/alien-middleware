@@ -2,7 +2,7 @@ import { AdapterRequestContext } from '@hattip/core'
 import { createServer } from 'node:http'
 import { AddressInfo } from 'node:net'
 import { noop } from 'radashi'
-import { chain } from '../src/index.ts'
+import { chain, filterPlatform } from '../src/index.ts'
 import { RequestContext } from '../src/types.ts'
 
 const app = chain()
@@ -115,7 +115,7 @@ describe('response callbacks', () => {
 
   test('override response', async () => {
     const ware = vi.fn(() => ({
-      onResponse() {
+      async onResponse() {
         return new Response(null, { status: 404 })
       },
     }))
@@ -263,4 +263,24 @@ test('response is cloned if its type is not "default"', async () => {
   expect(response.status).toBe(200)
   expect(await response.text()).toBe('Hello, world!')
   expect(response.headers.get('x-test')).toBe('test')
+})
+
+describe('filterPlatform middleware', () => {
+  test('continue the chain if the platform matches', async () => {
+    const ware = vi.fn(() => new Response(null, { status: 418 }))
+    const app = chain().use(filterPlatform('foo')).use(ware)
+
+    const response = await app({ ...context, platform: { name: 'foo' } })
+    expect(ware).toHaveBeenCalled()
+    expect(response.status).toBe(418)
+  })
+
+  test('exit the chain if the platform does not match', async () => {
+    const ware = vi.fn(() => new Response(null, { status: 418 }))
+    const app = chain().use(filterPlatform('foo')).use(ware)
+
+    const response = await app({ ...context, platform: { name: 'bar' } })
+    expect(ware).not.toHaveBeenCalled()
+    expect(response.status).toBe(404)
+  })
 })
