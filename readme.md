@@ -4,9 +4,17 @@ Reusable middleware chains with top-notch TypeScript support. Built upon [Hattip
 
 ## Philosophy
 
-By default, middlewares in `alien-middleware` are **synchronous** or **promise-based**. There is no `next()` function to call. If a middleware returns a `Response`, the chain is terminated. If a middleware wants to extend the request context, it returns an object implementing the `RequestPlugin` interface.
+alien-middleware is built on a few key principles:
 
-Middlewares are either **request-oriented** (the default) or **response-oriented**. Response-oriented middlewares run _after_ a `Response` has been generated. They're allowed to return a new `Response`, but cannot return a `RequestPlugin` object.
+1. **Best-in-class TypeScript support** - Type safety is a first-class citizen. The library provides strong type inference for middleware chains, context extensions, and environment variables.
+
+2. **Web Standards** - Built on standard Web APIs like `Request` and `Response`, allowing you to write idiomatic code that follows established patterns and conventions.
+
+3. **No vendor lock-in** - Thanks to Hattip's adapter system, your middleware can run anywhere: Node.js, Deno, Bun, Cloudflare Workers, and more.
+
+4. **Linear middleware flow** - Unlike Express-style middleware, there's no `next()` function to call. Middleware either returns a `Response` (ending the chain) or doesn't (continuing to the next middleware). This makes the flow easier to reason about and eliminates common bugs like forgetting to call `next()`.
+
+5. **Immutable chains** - Middleware chains are immutable, making them easier to compose, extend, and reason about.
 
 ## Quick Start
 
