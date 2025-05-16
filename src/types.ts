@@ -112,9 +112,15 @@ export type RequestContext<
  *
  * When type `T` is `never`, a default context is returned.
  */
-export type MiddlewareContext<T extends MiddlewareChain> = [T] extends [never]
+export type MiddlewareContext<T extends MiddlewareChain | Middleware[]> = [
+  T,
+] extends [never]
   ? RequestContext<{}, never, unknown>
-  : RequestContext<Env<T>, Properties<T>, Platform<T>>
+  : T extends MiddlewareChain
+    ? RequestContext<Env<T>, Properties<T>, Platform<T>>
+    : T extends Middleware[]
+      ? MiddlewareContext<ApplyMiddlewares<T>>
+      : never
 
 export type IsolatedContext<T extends MiddlewareChain> = RequestContext<
   InputProperties<T>,
