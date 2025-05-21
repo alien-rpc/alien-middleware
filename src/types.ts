@@ -123,13 +123,13 @@ export type MiddlewareContext<T extends MiddlewareChain | Middleware[]> = [
       : never
 
 export type IsolatedContext<T extends MiddlewareChain> = RequestContext<
-  InputProperties<T>,
   InputEnv<T>,
+  InputProperties<T>,
   Platform<T>
 >
 
 export type RequestMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
-  context: RequestContext<InputProperties<T>, InputEnv<T>, Platform<T>>
+  context: RequestContext<InputEnv<T>, InputProperties<T>, Platform<T>>
 ) => Awaitable<Response | RequestPlugin | void>
 
 export type ResponseCallback = (
