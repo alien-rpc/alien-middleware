@@ -57,14 +57,14 @@ describe('request middleware', () => {
     const ware = vi.fn((ctx: RequestContext) => {
       ctx.passThrough()
     })
-    const responseHandler = vi.fn(
-      (ctx: RequestContext, response: Response) => {}
-    )
+    const responseHandler = vi.fn((response: Response) => {})
 
     const response = await app
       .use(ware)
       .use(() => new Response(null, { status: 418 }))
-      .use(responseHandler)(context)
+      .use(ctx => {
+        ctx.onResponse(responseHandler)
+      })(context)
 
     expect(ware).toHaveBeenCalled()
     expect(response.status).toBe(404)
