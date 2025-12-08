@@ -217,8 +217,10 @@ export { filterPlatform } from './middleware/filterPlatform.ts'
 export type {
   ApplyMiddleware,
   ApplyMiddlewares,
+  EmptyMiddlewareChain,
   EnvAccessor,
   ExtractMiddleware,
+  HattipContext,
   Middleware,
   MiddlewareContext,
   RequestContext,

@@ -70,7 +70,7 @@ export type EnvAccessor<TEnv extends object> = {
 
 // This interface exists to reduce visual noise when hovering on a
 // RequestContext variable in your IDE.
-interface HattipContext<TPlatform, TEnv extends object>
+export interface HattipContext<TPlatform, TEnv extends object>
   extends AdapterRequestContext<TPlatform> {
   env: EnvAccessor<TEnv>
   passThrough(): never
