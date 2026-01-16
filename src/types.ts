@@ -119,7 +119,7 @@ export type MiddlewareContext<T extends MiddlewareChain | Middleware[]> = [
   : T extends MiddlewareChain
     ? RequestContext<Env<T>, Properties<T>, Platform<T>>
     : T extends Middleware[]
-      ? MiddlewareContext<ApplyMiddlewares<T>>
+      ? MiddlewareContext<MiddlewareChain<ApplyMiddlewares<T>>>
       : never
 
 export type IsolatedContext<T extends MiddlewareChain> = RequestContext<
@@ -208,7 +208,7 @@ type MiddlewarePlatform<T extends Middleware> =
   T extends Middleware<any, any, infer TPlatform> ? TPlatform : never
 
 /**
- * This applies a middleware to a chain. If the type `TMiddleware` is itself a
+ * This applies a middleware to a chain. If the type `TSecond` is itself a
  * chain, it's treated as a nested chain, which won't leak its plugins into the
  * parent chain.
  *
@@ -221,22 +221,12 @@ export type ApplyMiddleware<
 > =
   ApplyMiddlewareOutputs<TFirst, TSecond> extends infer TCurrent extends
     MiddlewareTypes['current']
-    ? RequestHandler<{
+    ? {
         initial: CastNever<Inputs<TFirst>, MiddlewareInputs<TSecond>>
         current: TCurrent
         platform: CastNever<Platform<TFirst>, MiddlewarePlatform<TSecond>>
-      }>
+      }
     : never
-
-/**
- * Apply a list of middlewares to an empty middleware chain.
- */
-export type ApplyMiddlewares<T extends Middleware[]> = T extends [
-  ...infer TRest extends Middleware[],
-  infer TLast extends Middleware,
-]
-  ? ApplyMiddleware<ApplyMiddlewares<TRest>, TLast>
-  : ApplyFirstMiddleware<T[0]>
 
 export type EmptyMiddlewareChain<TPlatform = unknown> = MiddlewareChain<{
   initial: { env: {}; properties: {} }
@@ -244,10 +234,24 @@ export type EmptyMiddlewareChain<TPlatform = unknown> = MiddlewareChain<{
   platform: TPlatform
 }>
 
+/**
+ * Convert a `Middleware` type into a `MiddlewareTypes` type.
+ * @internal For similar behavior with public APIs, use `ApplyMiddlewares<[T]>`.
+ */
 export type ApplyFirstMiddleware<T extends Middleware> =
-  T extends MiddlewareChain
-    ? T
+  T extends MiddlewareChain<infer TInternal>
+    ? TInternal
     : ApplyMiddleware<EmptyMiddlewareChain<MiddlewarePlatform<T>>, T>
+
+/**
+ * Flatten a list of middlewares into a `MiddlewareTypes` type.
+ */
+export type ApplyMiddlewares<T extends Middleware[]> = T extends [
+  ...infer TRest extends Middleware[],
+  infer TLast extends Middleware,
+]
+  ? ApplyMiddleware<MiddlewareChain<ApplyMiddlewares<TRest>>, TLast>
+  : ApplyFirstMiddleware<T[0]>
 
 export type RouteMethod =
   | 'GET'
@@ -264,9 +268,11 @@ export type RouteContext<
   TPathParams extends object = any,
   TMethod extends RouteMethod = RouteMethod,
 > = MiddlewareContext<
-  ApplyMiddleware<
-    MiddlewareChain<T['$Router']>,
-    () => { params: TPathParams; method: TMethod }
+  MiddlewareChain<
+    ApplyMiddleware<
+      MiddlewareChain<T['$Router']>,
+      () => { params: TPathParams; method: TMethod }
+    >
   >
 >
 
@@ -293,6 +299,7 @@ export interface Router<T extends MiddlewareChain = any>
     path: TPath,
     handler: RouteHandler<this, InferParams<TPath>>
   ): Router
+
   use<TPath extends string, TMethod extends RouteMethod = RouteMethod>(
     method: OneOrMany<TMethod> | '*',
     path: TPath,

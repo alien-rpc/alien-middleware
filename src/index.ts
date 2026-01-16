@@ -49,12 +49,12 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
    */
   use<const TMiddleware extends ExtractMiddleware<this>>(
     middleware: TMiddleware
-  ): ApplyMiddleware<this, TMiddleware> {
-    return createHandler(
+  ): RequestHandler<ApplyMiddleware<this, TMiddleware>> {
+    return createHandler<ApplyMiddleware<this, TMiddleware>>(
       middleware instanceof MiddlewareChain
         ? [...this[kRequestChain], ...middleware[kRequestChain]]
         : [...this[kRequestChain], middleware]
-    ) as ApplyMiddleware<this, TMiddleware>
+    )
   }
 
   /**
@@ -201,8 +201,14 @@ async function runMiddlewareChain(
 }
 
 /** Create a request handler that's also a middleware chain. */
-function createHandler(requestChain: RequestMiddleware[]) {
-  const handler = runMiddlewareChain.bind(null, requestChain) as RequestHandler
+function createHandler<T extends MiddlewareTypes>(
+  requestChain: RequestMiddleware[]
+) {
+  const handler = runMiddlewareChain.bind(
+    null,
+    requestChain
+  ) as RequestHandler<T>
+
   Object.setPrototypeOf(handler, MiddlewareChain.prototype)
   handler[kRequestChain] = requestChain
   return handler
@@ -220,7 +226,7 @@ export function chain<
 
 export function chain<T extends Middleware | MiddlewareChain>(
   middleware: T
-): T extends Middleware ? ApplyFirstMiddleware<T> : T
+): T extends Middleware ? MiddlewareChain<ApplyFirstMiddleware<T>> : T
 
 export function chain(middleware?: Middleware | MiddlewareChain) {
   if (middleware instanceof MiddlewareChain) {
