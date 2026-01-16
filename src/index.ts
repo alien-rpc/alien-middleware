@@ -241,6 +241,7 @@ export type {
   HattipContext,
   Middleware,
   MiddlewareContext,
+  MiddlewareTypes,
   RequestContext,
   RequestHandler,
   RequestMiddleware,
