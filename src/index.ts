@@ -220,11 +220,7 @@ export function chain<
   TEnv extends object = {},
   TProperties extends object = {},
   TPlatform = unknown,
->(): MiddlewareChain<{
-  initial: { env: TEnv; properties: TProperties }
-  current: { env: TEnv; properties: TProperties }
-  platform: TPlatform
-}>
+>(): MiddlewareChain<MiddlewareTypes<TEnv, TProperties, TPlatform>>
 
 export function chain<T extends AnyMiddleware>(
   middleware: T

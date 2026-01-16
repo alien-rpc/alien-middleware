@@ -26,19 +26,23 @@ type ReservedProperties = {
  */
 export type RequestPlugin = Record<string, unknown> & ReservedProperties
 
-export type MiddlewareTypes = {
+export type MiddlewareTypes<
+  TEnv extends object = object,
+  TProperties extends object = object,
+  TPlatform = unknown,
+> = {
   /** Values expected by the start of the chain. */
   initial: {
-    env: object
-    properties: object
+    env: TEnv
+    properties: TProperties
   }
   /** Values provided by the end of the chain. */
   current: {
-    env: object
-    properties: object
+    env: TEnv
+    properties: TProperties
   }
   /** Values from the host platform. */
-  platform: unknown
+  platform: TPlatform
 }
 
 type AnyMiddlewareTypes = {
