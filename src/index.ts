@@ -64,6 +64,15 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
   isolate(): (ctx: IsolatedContext<this>) => Awaitable<Response | void> {
     return isFunction(this) ? ctx => this(ctx) : noop
   }
+
+  /**
+   * @internal You should not need to call this method, unless you want a
+   * `RequestHandler` type from an empty middleware chain. If your middleware
+   * chain is **not** empty, you won't need this.
+   */
+  toHandler(): RequestHandler<T> {
+    return createHandler(this[kRequestChain])
+  }
 }
 
 /** Create an extended environment object that delegates to the parent context. */
