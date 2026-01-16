@@ -226,7 +226,7 @@ export function chain<
 
 export function chain<T extends Middleware | MiddlewareChain>(
   middleware: T
-): T extends Middleware ? MiddlewareChain<ApplyFirstMiddleware<T>> : T
+): T extends Middleware ? RequestHandler<ApplyFirstMiddleware<T>> : T
 
 export function chain(middleware?: Middleware | MiddlewareChain) {
   if (middleware instanceof MiddlewareChain) {
