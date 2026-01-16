@@ -47,7 +47,13 @@ type AnyMiddlewareTypes = {
   platform: any
 }
 
-type AnyMiddlewareChain = MiddlewareChain<AnyMiddlewareTypes>
+export type AnyMiddlewareChain<
+  T extends AnyMiddlewareTypes = AnyMiddlewareTypes,
+> = {
+  $MiddlewareChain: T
+}
+
+export type AnyMiddleware = Middleware | AnyMiddlewareChain
 
 type Inputs<T extends AnyMiddlewareChain> = T['$MiddlewareChain']['initial']
 type InputProperties<T extends AnyMiddlewareChain> = Inputs<T>['properties']
@@ -112,25 +118,25 @@ export type RequestContext<
  *
  * When type `T` is `never`, a default context is returned.
  */
-export type MiddlewareContext<T extends MiddlewareChain | Middleware[]> = [
-  T,
-] extends [never]
-  ? RequestContext<{}, never, unknown>
-  : T extends MiddlewareChain
-    ? RequestContext<Env<T>, Properties<T>, Platform<T>>
-    : T extends Middleware[]
-      ? MiddlewareContext<MiddlewareChain<ApplyMiddlewares<T>>>
-      : never
+export type MiddlewareContext<T extends AnyMiddlewareChain | AnyMiddleware[]> =
+  [T] extends [never]
+    ? RequestContext<{}, never, unknown>
+    : T extends AnyMiddlewareChain
+      ? RequestContext<Env<T>, Properties<T>, Platform<T>>
+      : T extends AnyMiddleware[]
+        ? MiddlewareContext<MiddlewareChain<ApplyMiddlewares<T>>>
+        : never
 
-export type IsolatedContext<T extends MiddlewareChain> = RequestContext<
+export type IsolatedContext<T extends AnyMiddlewareChain> = RequestContext<
   InputEnv<T>,
   InputProperties<T>,
   Platform<T>
 >
 
-export type RequestMiddleware<T extends MiddlewareChain = MiddlewareChain> = (
-  context: RequestContext<InputEnv<T>, InputProperties<T>, Platform<T>>
-) => Awaitable<Response | RequestPlugin | void>
+export type RequestMiddleware<T extends AnyMiddlewareChain = MiddlewareChain> =
+  (
+    context: RequestContext<InputEnv<T>, InputProperties<T>, Platform<T>>
+  ) => Awaitable<Response | RequestPlugin | void>
 
 export type ResponseCallback = (
   response: Response
@@ -165,14 +171,16 @@ export type Middleware<
 /**
  * Extract a `Middleware` type from a `MiddlewareChain` type.
  */
-export type ExtractMiddleware<T extends MiddlewareChain> = [T] extends [never]
+export type ExtractMiddleware<T extends AnyMiddlewareChain> = [T] extends [
+  never,
+]
   ? Middleware<{}, {}, any>
   : Middleware<Env<T>, Properties<T>, Platform<T>>
 
 /**
  * Merge a request plugin into a middleware chain.
  */
-type ApplyMiddlewareResult<TParent extends MiddlewareChain, TResult> = Eval<{
+type ApplyMiddlewareResult<TParent extends AnyMiddlewareChain, TResult> = Eval<{
   env: Merge<
     Env<TParent>,
     TResult extends { env: infer TEnv extends object | undefined }
@@ -188,9 +196,9 @@ type ApplyMiddlewareResult<TParent extends MiddlewareChain, TResult> = Eval<{
 }>
 
 type ApplyMiddlewareOutputs<
-  TFirst extends MiddlewareChain,
-  TSecond extends Middleware,
-> = TSecond extends MiddlewareChain
+  TFirst extends AnyMiddlewareChain,
+  TSecond extends AnyMiddleware,
+> = TSecond extends AnyMiddlewareChain
   ? {
       env: Merge<Env<TFirst>, Env<TSecond>>
       properties: Merge<Properties<TFirst>, Properties<TSecond>>
@@ -199,13 +207,17 @@ type ApplyMiddlewareOutputs<
     ? ApplyMiddlewareResult<TFirst, Exclude<TResult, Response>>
     : Current<TFirst>
 
-type MiddlewareInputs<T extends Middleware> =
-  T extends Middleware<infer TEnv, infer TProperties>
+type MiddlewareInputs<T extends AnyMiddleware> = T extends AnyMiddlewareChain
+  ? Inputs<T>
+  : T extends Middleware<infer TEnv, infer TProperties>
     ? { env: TEnv; properties: TProperties }
     : never
 
-type MiddlewarePlatform<T extends Middleware> =
-  T extends Middleware<any, any, infer TPlatform> ? TPlatform : never
+type MiddlewarePlatform<T extends AnyMiddleware> = T extends AnyMiddlewareChain
+  ? Platform<T>
+  : T extends Middleware<any, any, infer TPlatform>
+    ? TPlatform
+    : never
 
 /**
  * This applies a middleware to a chain. If the type `TSecond` is itself a
@@ -216,8 +228,8 @@ type MiddlewarePlatform<T extends Middleware> =
  * output types being used as the request handler's input types.
  */
 export type ApplyMiddleware<
-  TFirst extends MiddlewareChain,
-  TSecond extends Middleware,
+  TFirst extends AnyMiddlewareChain,
+  TSecond extends AnyMiddleware,
 > =
   ApplyMiddlewareOutputs<TFirst, TSecond> extends infer TCurrent extends
     MiddlewareTypes['current']
@@ -238,17 +250,17 @@ export type EmptyMiddlewareChain<TPlatform = unknown> = MiddlewareChain<{
  * Convert a `Middleware` type into a `MiddlewareTypes` type.
  * @internal For similar behavior with public APIs, use `ApplyMiddlewares<[T]>`.
  */
-export type ApplyFirstMiddleware<T extends Middleware> =
-  T extends MiddlewareChain<infer TInternal>
+export type ApplyFirstMiddleware<T extends AnyMiddleware> =
+  T extends AnyMiddlewareChain<infer TInternal>
     ? TInternal
     : ApplyMiddleware<EmptyMiddlewareChain<MiddlewarePlatform<T>>, T>
 
 /**
  * Flatten a list of middlewares into a `MiddlewareTypes` type.
  */
-export type ApplyMiddlewares<T extends Middleware[]> = T extends [
-  ...infer TRest extends Middleware[],
-  infer TLast extends Middleware,
+export type ApplyMiddlewares<T extends AnyMiddleware[]> = T extends [
+  ...infer TRest extends AnyMiddleware[],
+  infer TLast extends AnyMiddleware,
 ]
   ? ApplyMiddleware<MiddlewareChain<ApplyMiddlewares<TRest>>, TLast>
   : ApplyFirstMiddleware<T[0]>

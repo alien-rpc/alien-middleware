@@ -1,6 +1,8 @@
 import { AdapterRequestContext } from '@hattip/core'
 import { isFunction, noop } from 'radashi'
 import {
+  AnyMiddleware,
+  AnyMiddlewareChain,
   ApplyFirstMiddleware,
   ApplyMiddleware,
   ExtractMiddleware,
@@ -224,11 +226,11 @@ export function chain<
   platform: TPlatform
 }>
 
-export function chain<T extends Middleware | MiddlewareChain>(
+export function chain<T extends AnyMiddleware>(
   middleware: T
-): T extends Middleware ? RequestHandler<ApplyFirstMiddleware<T>> : T
+): T extends AnyMiddlewareChain ? T : RequestHandler<ApplyFirstMiddleware<T>>
 
-export function chain(middleware?: Middleware | MiddlewareChain) {
+export function chain(middleware?: Middleware) {
   if (middleware instanceof MiddlewareChain) {
     return middleware
   }
