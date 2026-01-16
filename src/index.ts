@@ -200,11 +200,11 @@ export function chain<
   platform: TPlatform
 }>
 
-export function chain<const T extends Middleware = Middleware<{}, {}, unknown>>(
+export function chain<T extends Middleware | MiddlewareChain>(
   middleware: T
-): ApplyFirstMiddleware<T>
+): T extends Middleware ? ApplyFirstMiddleware<T> : T
 
-export function chain(middleware?: Middleware) {
+export function chain(middleware?: Middleware | MiddlewareChain) {
   if (middleware instanceof MiddlewareChain) {
     return middleware
   }
