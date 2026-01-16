@@ -236,5 +236,5 @@ export type {
   RequestHandler,
   RequestMiddleware,
   RequestPlugin,
-  ResponseCallback
+  ResponseCallback,
 } from './types.ts'
