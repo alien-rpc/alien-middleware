@@ -8,6 +8,7 @@ import {
   Middleware,
   MiddlewareTypes,
   RequestContext,
+  RequestHandler,
   RequestMiddleware,
   ResponseCallback,
 } from './types'
@@ -35,6 +36,7 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
   /** The number of parameters when called as a function. */
   declare readonly length: 1
 
+  // Any properties added here must also be set in the `createHandler` function.
   protected [kRequestChain]: RequestMiddleware[] = []
 
   /**
@@ -52,7 +54,7 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
       middleware instanceof MiddlewareChain
         ? [...this[kRequestChain], ...middleware[kRequestChain]]
         : [...this[kRequestChain], middleware]
-    )
+    ) as ApplyMiddleware<this, TMiddleware>
   }
 
   /**
@@ -64,130 +66,137 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
   }
 }
 
-function createHandler(requestChain: RequestMiddleware[]): any {
-  async function handler(parentContext: InternalContext) {
-    const context = Object.create(parentContext) as InternalContext
-    context[kIgnoreNotFound] = true
-    defineParsedURL(context)
-
-    const { passThrough } = context
-
-    let shouldPassThrough = false
-    context.passThrough = () => {
-      shouldPassThrough = true
-    }
-
-    context.setHeader = (name, value) => {
-      // Avoid leaking headers into the parent context. This condition also
-      // passes if no headers have been set yet.
-      if (context[kResponseHeaders] === parentContext[kResponseHeaders]) {
-        context[kResponseHeaders] = new Headers(parentContext[kResponseHeaders])
-      }
-      context[kResponseHeaders]!.set(name, value)
-    }
-
-    const responseChain: ResponseCallback[] = []
-
-    context.onResponse = callback => {
-      responseChain.push(callback)
-    }
-
-    // Avoid calling the same middleware twice.
-    const cache = (context[kMiddlewareCache] = new Set(
-      parentContext[kMiddlewareCache]
-    ))
-
-    let response: Response | undefined
-    let env: Record<string, string> | undefined
-
-    for (const middleware of requestChain) {
-      if (cache.has(middleware)) {
-        continue
-      }
-      cache.add(middleware)
-      let result = middleware(context as RequestContext)
-      if (result instanceof Promise) {
-        result = await result
-      }
-      if (shouldPassThrough) {
-        break
-      }
-      // If defined, it's a response or a plugin.
-      if (result) {
-        if (result instanceof Response) {
-          response = result
-          break
-        }
-        for (const key in result) {
-          if (key === 'env') {
-            if (result.env) {
-              env ||= createExtendedEnv(context)
-              Object.defineProperties(
-                env,
-                Object.getOwnPropertyDescriptors(result.env)
-              )
-            }
-          } else if (key === 'onResponse') {
-            if (result.onResponse) {
-              responseChain.push(result.onResponse)
-            }
-          } else {
-            const descriptor = Object.getOwnPropertyDescriptor(result, key)!
-
-            // Plugins cannot redefine context properties from other plugins.
-            descriptor.configurable = false
-            Object.defineProperty(context, key, descriptor)
-          }
-        }
-      }
-    }
-
-    if (!response) {
-      if (parentContext[kIgnoreNotFound]) {
-        return // …instead of issuing a 404 Response.
-      }
-      response = new Response('Not Found', { status: 404 })
-      if (shouldPassThrough) {
-        passThrough()
-        return response
-      }
-    }
-    // Ensure the response's headers can be modified.
-    else if (response.type !== 'default') {
-      response = new Response(response.body, response)
-    }
-
-    context[kResponseHeaders]?.forEach((value, name) => {
-      response!.headers.set(name, value)
-    })
-
-    // Prevent response callbacks from using `setHeader()`.
-    context.setHeader = null!
-
-    for (const plugin of responseChain) {
-      let result = plugin(response)
-      if (result instanceof Promise) {
-        result = await result
-      }
-      if (result) {
-        response = result
-        continue // …instead of break.
-      }
-    }
-
-    return response
-  }
-
-  Object.setPrototypeOf(handler, MiddlewareChain.prototype)
-  handler[kRequestChain] = requestChain
-  return handler as any
-}
-
+/** Create an extended environment object that delegates to the parent context. */
 function createExtendedEnv(context: InternalContext) {
   const env = Object.create(null) as Record<string, string>
   const superEnv = context.env
   context.env = key => env[key] ?? superEnv(key)
   return env
+}
+
+/** Run a middleware chain with a Hattip context. */
+async function runMiddlewareChain(
+  requestChain: RequestMiddleware[],
+  parentContext: InternalContext
+) {
+  const context = Object.create(parentContext) as InternalContext
+  context[kIgnoreNotFound] = true
+  defineParsedURL(context)
+
+  const { passThrough } = context
+
+  let shouldPassThrough = false
+  context.passThrough = () => {
+    shouldPassThrough = true
+  }
+
+  context.setHeader = (name, value) => {
+    // Avoid leaking headers into the parent context. This condition also
+    // passes if no headers have been set yet.
+    if (context[kResponseHeaders] === parentContext[kResponseHeaders]) {
+      context[kResponseHeaders] = new Headers(parentContext[kResponseHeaders])
+    }
+    context[kResponseHeaders]!.set(name, value)
+  }
+
+  const responseChain: ResponseCallback[] = []
+
+  context.onResponse = callback => {
+    responseChain.push(callback)
+  }
+
+  // Avoid calling the same middleware twice.
+  const cache = (context[kMiddlewareCache] = new Set(
+    parentContext[kMiddlewareCache]
+  ))
+
+  let response: Response | undefined
+  let env: Record<string, string> | undefined
+
+  for (const middleware of requestChain) {
+    if (cache.has(middleware)) {
+      continue
+    }
+    cache.add(middleware)
+    let result = middleware(context as RequestContext)
+    if (result instanceof Promise) {
+      result = await result
+    }
+    if (shouldPassThrough) {
+      break
+    }
+    // If defined, it's a response or a plugin.
+    if (result) {
+      if (result instanceof Response) {
+        response = result
+        break
+      }
+      for (const key in result) {
+        if (key === 'env') {
+          if (result.env) {
+            env ||= createExtendedEnv(context)
+            Object.defineProperties(
+              env,
+              Object.getOwnPropertyDescriptors(result.env)
+            )
+          }
+        } else if (key === 'onResponse') {
+          if (result.onResponse) {
+            responseChain.push(result.onResponse)
+          }
+        } else {
+          const descriptor = Object.getOwnPropertyDescriptor(result, key)!
+
+          // Plugins cannot redefine context properties from other plugins.
+          descriptor.configurable = false
+          Object.defineProperty(context, key, descriptor)
+        }
+      }
+    }
+  }
+
+  if (!response) {
+    if (parentContext[kIgnoreNotFound]) {
+      return // …instead of issuing a 404 Response.
+    }
+    response = new Response('Not Found', { status: 404 })
+    if (shouldPassThrough) {
+      passThrough()
+      return response
+    }
+  }
+  // Ensure the response's headers can be modified.
+  else if (response.type !== 'default') {
+    response = new Response(response.body, response)
+  }
+
+  context[kResponseHeaders]?.forEach((value, name) => {
+    response!.headers.set(name, value)
+  })
+
+  // Prevent response callbacks from using `setHeader()`.
+  context.setHeader = null!
+
+  for (const plugin of responseChain) {
+    let result = plugin(response)
+    if (result instanceof Promise) {
+      result = await result
+    }
+    if (result) {
+      response = result
+      continue // …instead of break.
+    }
+  }
+
+  return response
+}
+
+/** Create a request handler that's also a middleware chain. */
+function createHandler(requestChain: RequestMiddleware[]) {
+  const handler = runMiddlewareChain.bind(null, requestChain) as RequestHandler
+  Object.setPrototypeOf(handler, MiddlewareChain.prototype)
+  handler[kRequestChain] = requestChain
+  return handler
 }
 
 export function chain<
@@ -227,5 +236,5 @@ export type {
   RequestHandler,
   RequestMiddleware,
   RequestPlugin,
-  ResponseCallback,
+  ResponseCallback
 } from './types.ts'
