@@ -226,6 +226,18 @@ test('middleware chains can be isolated', async () => {
   expect(chain().isolate()).toBe(noop)
 })
 
+test('toHandler returns a callable handler for an empty chain', async () => {
+  const handler = chain().toHandler()
+  const response = await handler(context)
+
+  expect(response.status).toBe(404)
+
+  const responseWithMiddleware = await handler
+    .use(() => new Response(null, { status: 418 }))(context)
+
+  expect(responseWithMiddleware.status).toBe(418)
+})
+
 test('chain is a no-op if a middleware chain is passed', () => {
   const chain1 = chain().use(noop)
   const chain2 = chain(chain1)
