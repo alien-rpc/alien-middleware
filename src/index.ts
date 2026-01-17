@@ -41,6 +41,10 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
   // Any properties added here must also be set in the `createHandler` function.
   protected [kRequestChain]: RequestMiddleware[] = []
 
+  get middlewareCount(): number {
+    return this[kRequestChain].length
+  }
+
   /**
    * Add a request middleware to the end of the chain.
    *
