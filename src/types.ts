@@ -113,7 +113,7 @@ export interface HattipContext<TPlatform, TEnv extends object>
  */
 export type RequestContext<
   TEnv extends object = any,
-  TProperties extends object = never,
+  TProperties extends object = {},
   TPlatform = any,
 > = HattipContext<TPlatform, TEnv> & CastNever<TProperties, unknown>
 
@@ -159,7 +159,7 @@ export interface RequestHandler<T extends MiddlewareTypes = any>
  */
 export type Middleware<
   TEnv extends object = any,
-  TProperties extends object = any,
+  TProperties extends object = {},
   TPlatform = any,
 > = {
   (
