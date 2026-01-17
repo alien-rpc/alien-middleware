@@ -50,8 +50,11 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
    * @returns a new `MiddlewareChain` instance
    */
   use<const TMiddleware extends ExtractMiddleware<this>>(
-    middleware: TMiddleware
+    middleware: TMiddleware | null
   ): RequestHandler<ApplyMiddleware<this, TMiddleware>> {
+    if (!middleware) {
+      return this.toHandler()
+    }
     return createHandler<ApplyMiddleware<this, TMiddleware>>(
       middleware instanceof MiddlewareChain
         ? [...this[kRequestChain], ...middleware[kRequestChain]]
@@ -72,7 +75,7 @@ export class MiddlewareChain<T extends MiddlewareTypes = any> {
    * `RequestHandler` type from an empty middleware chain. If your middleware
    * chain is **not** empty, you won't need this.
    */
-  toHandler(): RequestHandler<T> {
+  toHandler<T2 extends MiddlewareTypes = T>(): RequestHandler<T2> {
     return createHandler(this[kRequestChain])
   }
 }
