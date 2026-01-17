@@ -26,6 +26,12 @@ test('chaining is pure', async () => {
   expect(ware).not.toHaveBeenCalled()
 })
 
+test('use(null) is a no-op', () => {
+  const result = app.use(null)
+  expect(typeof result).toBe('function')
+  expect(result.middlewareCount).toBe(0)
+})
+
 describe('request middleware', () => {
   test('define new properties', async () => {
     const ware = vi.fn((ctx: RequestContext<{}, { foo: boolean }>) => {
@@ -232,8 +238,9 @@ test('toHandler returns a callable handler for an empty chain', async () => {
 
   expect(response.status).toBe(404)
 
-  const responseWithMiddleware = await handler
-    .use(() => new Response(null, { status: 418 }))(context)
+  const responseWithMiddleware = await handler.use(
+    () => new Response(null, { status: 418 })
+  )(context)
 
   expect(responseWithMiddleware.status).toBe(418)
 })
