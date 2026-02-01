@@ -165,8 +165,8 @@ async function runMiddlewareChain(
         } else {
           const descriptor = Object.getOwnPropertyDescriptor(result, key)!
 
-          // Plugins cannot redefine context properties from other plugins.
-          descriptor.configurable = false
+          // Plugins can redefine context properties from other plugins.
+          descriptor.configurable = true
           Object.defineProperty(context, key, descriptor)
         }
       }
